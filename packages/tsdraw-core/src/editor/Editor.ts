@@ -3,6 +3,7 @@ import type { Viewport } from '../canvas/viewport.js';
 import { createViewport, screenToPage } from '../canvas/viewport.js';
 import { CanvasRenderer } from '../canvas/renderer.js';
 import { InputManager } from '../input/inputManager.js';
+import type { ToolStateContext } from '../store/stateNode.js';
 import { ToolManager, type ToolId } from '../tools/toolManager.js';
 import { PenIdleState } from '../tools/pen/states/PenIdleState.js';
 import { PenDrawingState } from '../tools/pen/states/PenDrawingState.js';
@@ -42,7 +43,9 @@ export class Editor {
 
   constructor(opts: EditorOptions = {}) {
     this.options = { dragDistanceSquared: opts.dragDistanceSquared ?? DRAG_DISTANCE_SQUARED };
-    const ctx = { transition: (id: string, info?: unknown) => this.tools.transition(id, info) };
+    const ctx: ToolStateContext = {
+      transition: (id, info) => this.tools.transition(id, info),
+    };
     this.tools.registerState(new PenIdleState(ctx, this));
     this.tools.registerState(new PenDrawingState(ctx, this));
     this.tools.registerState(new EraserIdleState(ctx, this));

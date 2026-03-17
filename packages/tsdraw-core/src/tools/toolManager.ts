@@ -1,4 +1,10 @@
-import type { StateNode } from '../store/stateNode.js';
+import type {
+  StateNode,
+  ToolKeyInfo,
+  ToolPointerDownInfo,
+  ToolPointerMoveInfo,
+  ToolStateTransitionInfo,
+} from '../store/stateNode.js';
 
 export type ToolId = 'pen' | 'eraser' | 'select' | 'hand';
 
@@ -9,7 +15,7 @@ export class ToolManager {
   private states: Map<string, StateNode> = new Map();
 
   registerState(state: StateNode): void {
-    const ctor = state.constructor as unknown as { id: string };
+    const ctor = state.constructor as typeof StateNode;
     this.states.set(ctor.id, state);
   }
 
@@ -38,7 +44,7 @@ export class ToolManager {
     return 'pen_idle';
   }
 
-  transition(stateId: string, info?: unknown): void {
+  transition(stateId: string, info?: ToolStateTransitionInfo): void {
     const next = this.states.get(stateId);
     if (!next) return;
     this.currentState?.onExit?.(undefined, stateId);
@@ -46,12 +52,12 @@ export class ToolManager {
     this.currentState.onEnter?.(info);
   }
 
-  pointerDown(info: unknown): void { this.currentState?.onPointerDown?.(info); }
-  pointerMove(info: unknown): void { this.currentState?.onPointerMove?.(info); }
-  pointerUp(info: unknown): void { this.currentState?.onPointerUp?.(info); }
+  pointerDown(info: ToolPointerDownInfo): void { this.currentState?.onPointerDown?.(info); }
+  pointerMove(info: ToolPointerMoveInfo): void { this.currentState?.onPointerMove?.(info); }
+  pointerUp(): void { this.currentState?.onPointerUp?.(); }
 
-  keyDown(info: unknown): void { this.currentState?.onKeyDown?.(info); }
-  keyUp(info: unknown): void { this.currentState?.onKeyUp?.(info); }
+  keyDown(info: ToolKeyInfo): void { this.currentState?.onKeyDown?.(info); }
+  keyUp(info: ToolKeyInfo): void { this.currentState?.onKeyUp?.(info); }
 
   cancel(): void { this.currentState?.onCancel?.(); }
   interrupt(): void { this.currentState?.onInterrupt?.(); }

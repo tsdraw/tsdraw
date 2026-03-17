@@ -1,4 +1,4 @@
-import { StateNode } from '../../../store/stateNode.js';
+import { StateNode, type ToolStateTransitionInfo } from '../../../store/stateNode.js';
 import type { DrawShape } from '../../../types.js';
 import type { ShapeId } from '../../../types.js';
 import { segmentHitsShape, boundsOf, padBounds, ERASER_MARGIN } from '../eraserHitTest.js';
@@ -9,7 +9,7 @@ export class EraserErasingState extends StateNode {
 
   private _marked: ShapeId[] = [];
 
-  override onEnter(_info: unknown): void {
+  override onEnter(_info?: ToolStateTransitionInfo): void {
     this._marked = [...this.editor.getErasingShapeIds()];
     this.sweep();
   }

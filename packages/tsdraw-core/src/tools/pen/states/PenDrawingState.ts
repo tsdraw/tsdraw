@@ -1,4 +1,8 @@
-import { StateNode } from '../../../store/stateNode.js';
+import {
+  StateNode,
+  type ToolKeyInfo,
+  type ToolPointerDownInfo,
+} from '../../../store/stateNode.js';
 import type { DrawShape, DrawSegment, Vec3 } from '../../../types.js';
 import { STROKE_WIDTHS, MAX_POINTS_PER_SHAPE } from '../../../types.js';
 import { encodePoints, decodePoints, decodeFirstPoint, decodeLastPoint } from '../../../utils/pathCodec.js';
@@ -10,7 +14,7 @@ type StrokePhase = 'free' | 'straight' | 'starting_straight' | 'starting_free';
 export class PenDrawingState extends StateNode {
   static override id = 'pen_drawing';
 
-  private _startInfo!: { point: Vec3 };
+  private _startInfo: ToolPointerDownInfo = { point: { x: 0, y: 0, z: 0.5 } };
   private _target: DrawShape | undefined;
   private _isPenDevice = false;
   private _hasPressure = false;
@@ -23,9 +27,8 @@ export class PenDrawingState extends StateNode {
   private _pathLen = 0;
   private _activePts: Vec3[] = [];
 
-  override onEnter(info: unknown): void {
-    const e = info as { point: Vec3 };
-    this._startInfo = e ?? { point: { x: 0, y: 0, z: 0.5 } };
+  override onEnter(info?: ToolPointerDownInfo): void {
+    this._startInfo = info ?? { point: { x: 0, y: 0, z: 0.5 } };
     this._lastSample = { ...this.editor.input.getCurrentPagePoint() };
     this.beginStroke();
   }
@@ -55,9 +58,8 @@ export class PenDrawingState extends StateNode {
   // Shift: start a new straight segment
   // Maybe add a specific key for snapping or turning drawing into a proper shape?
 
-  override onKeyDown(info: unknown): void {
-    const e = info as { key: string };
-    if (e?.key === 'Shift') {
+  override onKeyDown(info?: ToolKeyInfo): void {
+    if (info?.key === 'Shift') {
       switch (this._phase) {
         case 'free':
           this._phase = 'starting_straight';
@@ -71,9 +73,8 @@ export class PenDrawingState extends StateNode {
     this.advanceStroke();
   }
 
-  override onKeyUp(info: unknown): void {
-    const e = info as { key: string };
-    if (e?.key === 'Shift') {
+  override onKeyUp(info?: ToolKeyInfo): void {
+    if (info?.key === 'Shift') {
       switch (this._phase) {
         case 'straight':
           this._phase = 'starting_free';

@@ -481,7 +481,7 @@ export function useTsdrawCanvasController(): TsdrawCanvasController {
         }
       }
 
-      editor.tools.pointerUp({});
+      editor.tools.pointerUp();
       render();
       refreshSelectionBounds(editor);
     };

@@ -1,4 +1,8 @@
-import { StateNode } from '../../../store/stateNode.js';
+import {
+  StateNode,
+  type ToolPointerMoveInfo,
+  type ToolStateTransitionInfo,
+} from '../../../store/stateNode.js';
 import type { DrawShape } from '../../../types.js';
 import type { ShapeId } from '../../../types.js';
 import { pointHitsShape, ERASER_MARGIN } from '../eraserHitTest.js';
@@ -7,7 +11,7 @@ import { pointHitsShape, ERASER_MARGIN } from '../eraserHitTest.js';
 export class EraserPointingState extends StateNode {
   static override id = 'eraser_pointing';
 
-  override onEnter(_info: unknown): void {
+  override onEnter(_info?: ToolStateTransitionInfo): void {
     const zoom = this.editor.getZoomLevel();
     const tolerance = ERASER_MARGIN / zoom;
     const pt = this.editor.input.getCurrentPagePoint();
@@ -23,7 +27,7 @@ export class EraserPointingState extends StateNode {
     this.editor.setErasingShapes(hits);
   }
 
-  override onPointerMove(info: unknown): void {
+  override onPointerMove(info?: ToolPointerMoveInfo): void {
     if (this.editor.input.getIsDragging()) {
       this.ctx.transition('eraser_erasing', info);
     }
@@ -33,7 +37,7 @@ export class EraserPointingState extends StateNode {
     this.finish();
   }
 
-  override onExit(_info: unknown, to?: string): void {
+  override onExit(_info?: ToolStateTransitionInfo, to?: string): void {
     if (to !== 'eraser_erasing') {
       this.editor.setErasingShapes([]);
     }

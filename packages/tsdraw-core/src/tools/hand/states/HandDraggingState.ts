@@ -1,15 +1,10 @@
-import { StateNode } from '../../../store/stateNode.js';
-
-type HandMoveInfo = {
-  screenDeltaX?: number;
-  screenDeltaY?: number;
-};
+import { StateNode, type ToolPointerMoveInfo } from '../../../store/stateNode.js';
 
 export class HandDraggingState extends StateNode {
   static override id = 'hand_dragging';
 
-  override onPointerMove(info: unknown): void {
-    const move = (info ?? {}) as HandMoveInfo;
+  override onPointerMove(info?: ToolPointerMoveInfo): void {
+    const move = info ?? {};
     const dx = move.screenDeltaX ?? 0;
     const dy = move.screenDeltaY ?? 0;
     if (dx === 0 && dy === 0) return;
