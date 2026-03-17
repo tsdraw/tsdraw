@@ -6,7 +6,8 @@
 </div>
 
 <h3 align="center">
-  Easily create infinite canvas apps in React with tsdraw
+  Easily create infinite canvas apps in React with tsdraw<br>
+  <sub><sup>(inspired by excalidraw and tldraw)</sup></sub>
 </h3>
 
 ## Feature highlights
@@ -14,7 +15,7 @@
 tsdraw is an infinite canvas drawing package with modern design at its heart.
 
 - **drawing**: tsdraw supports styluses, and comes with an easily customizable ui
-- **tremendously small**: tsdraw is made to be small, and load into your page instantly when you need it.
+- **tremendously small**: tsdraw is made to be small, and load into your page instantly when needed.
 
 ## Principles
 

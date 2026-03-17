@@ -1,6 +1,6 @@
 import type { StateNode } from '../store/stateNode.js';
 
-export type ToolId = 'pen' | 'eraser';
+export type ToolId = 'pen' | 'eraser' | 'select' | 'hand';
 
 // Manages current tool and passes pointer/key events to state nodes
 export class ToolManager {
@@ -33,6 +33,8 @@ export class ToolManager {
   private getInitialStateForTool(id: ToolId): string {
     if (id === 'pen') return 'pen_idle';
     if (id === 'eraser') return 'eraser_idle';
+    if (id === 'select') return 'select_idle';
+    if (id === 'hand') return 'hand_idle';
     return 'pen_idle';
   }
 

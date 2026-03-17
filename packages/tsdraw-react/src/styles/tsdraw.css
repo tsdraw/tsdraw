@@ -198,3 +198,74 @@
 .tsdraw-style-size--xl {
   height: 7px;
 }
+
+.tsdraw-selection-brush {
+  position: absolute;
+  border: 1px solid rgba(68, 101, 233, 0.95);
+  background: rgba(68, 101, 233, 0.12);
+  pointer-events: none;
+  z-index: 90;
+}
+
+.tsdraw-selection-frame {
+  position: absolute;
+  transform-origin: center center;
+  pointer-events: none;
+  z-index: 91;
+}
+
+.tsdraw-selection-bounds {
+  position: absolute;
+  inset: 0;
+  border: 1px solid #4465e9;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9) inset;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.tsdraw-selection-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 1px solid #4465e9;
+  background: #ffffff;
+  transform: translate(-50%, -50%);
+  border-radius: 2px;
+  padding: 0;
+  cursor: nwse-resize;
+  z-index: 2;
+  pointer-events: auto;
+}
+
+.tsdraw-selection-handle--ne,
+.tsdraw-selection-handle--sw {
+  cursor: nesw-resize;
+}
+
+.tsdraw-rotation-stem {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 0;
+  height: 15px;
+  border-left: 1px solid #4465e9;
+  transform: translate(-50%, -100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.tsdraw-rotation-handle {
+  position: absolute;
+  left: 50%;
+  top: -20px;
+  width: 10px;
+  height: 10px;
+  border: 1px solid #4465e9;
+  background: #ffffff;
+  transform: translate(-50%, -50%);
+  border-radius: 2px;
+  padding: 0;
+  cursor: grab;
+  z-index: 3;
+  pointer-events: auto;
+}

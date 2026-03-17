@@ -18,4 +18,5 @@ export interface IEditor {
   getCurrentPageRenderingShapesSorted(): import('../types.js').Shape[];
   getCurrentDrawStyle(): { color: ColorStyle; dash: DashStyle; size: SizeStyle };
   setCurrentDrawStyle(partial: Partial<{ color: ColorStyle; dash: DashStyle; size: SizeStyle }>): void;
+  panBy(dx: number, dy: number): void;
 }
