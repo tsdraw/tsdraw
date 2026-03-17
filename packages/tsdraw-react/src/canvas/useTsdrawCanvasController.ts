@@ -2,6 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import {
   Editor,
+  DEFAULT_COLORS,
+  ERASER_MARGIN,
+  STROKE_WIDTHS,
   normalizeSelectionBounds,
   applyMove,
   applyResize,
@@ -16,7 +19,6 @@ import {
 } from 'tsdraw-core';
 import type { ColorStyle, DashStyle, ShapeId, SizeStyle, SelectionBounds } from 'tsdraw-core';
 import { getCanvasCursor } from './cursor.js';
-import { shouldShowPenStylePanel } from '../tools/pen/penTool.js';
 import type { ScreenRect } from '../types.js';
 
 type SelectDragMode = 'none' | 'marquee' | 'move' | 'resize' | 'rotate';
@@ -33,6 +35,15 @@ export interface TsdrawCanvasController {
   selectionBounds: ScreenRect | null;
   selectionRotationDeg: number;
   canvasCursor: string;
+  toolOverlay: {
+    visible: boolean;
+    pointerX: number;
+    pointerY: number;
+    isPenPreview: boolean;
+    penRadius: number;
+    penColor: string;
+    eraserRadius: number;
+  };
   showStylePanel: boolean;
   setTool: (tool: ToolId) => void;
   applyDrawStyle: (partial: Partial<{ color: ColorStyle; dash: DashStyle; size: SizeStyle }>) => void;
@@ -48,6 +59,10 @@ function toScreenRect(editor: Editor, bounds: SelectionBounds): ScreenRect {
     width: (bounds.maxX - bounds.minX) * zoom,
     height: (bounds.maxY - bounds.minY) * zoom,
   };
+}
+
+function resolveDrawColor(colorStyle: ColorStyle): string {
+  return DEFAULT_COLORS[colorStyle] ?? colorStyle;
 }
 
 export function useTsdrawCanvasController(): TsdrawCanvasController {
@@ -106,6 +121,8 @@ export function useTsdrawCanvasController(): TsdrawCanvasController {
   const [isMovingSelection, setIsMovingSelection] = useState(false);
   const [isResizingSelection, setIsResizingSelection] = useState(false);
   const [isRotatingSelection, setIsRotatingSelection] = useState(false);
+  const [pointerScreenPoint, setPointerScreenPoint] = useState({ x: 0, y: 0 });
+  const [isPointerInsideCanvas, setIsPointerInsideCanvas] = useState(false);
 
   useEffect(() => {
     currentToolRef.current = currentTool;
@@ -142,6 +159,23 @@ export function useTsdrawCanvasController(): TsdrawCanvasController {
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
     return editor.screenToPage(clientX - rect.left, clientY - rect.top);
+  }, []);
+
+  const updatePointerPreview = useCallback((clientX: number, clientY: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const isInside =
+      clientX >= rect.left &&
+      clientX <= rect.right &&
+      clientY >= rect.top &&
+      clientY <= rect.bottom;
+
+    setIsPointerInsideCanvas(isInside);
+    setPointerScreenPoint({
+      x: clientX - rect.left,
+      y: clientY - rect.top,
+    });
   }, []);
 
   const resetSelectUi = useCallback(() => {
@@ -257,6 +291,7 @@ export function useTsdrawCanvasController(): TsdrawCanvasController {
       if (!canvas.contains(e.target as Node)) return;
       canvas.setPointerCapture(e.pointerId);
       lastPointerClientRef.current = { x: e.clientX, y: e.clientY };
+      updatePointerPreview(e.clientX, e.clientY);
 
       const first = sampleEvents(e)[0]!;
       const { x, y } = getPagePoint(first);
@@ -306,6 +341,7 @@ export function useTsdrawCanvasController(): TsdrawCanvasController {
     };
 
     const handlePointerMove = (e: PointerEvent) => {
+      updatePointerPreview(e.clientX, e.clientY);
       const prevClient = lastPointerClientRef.current;
       const dx = prevClient ? e.clientX - prevClient.x : 0;
       const dy = prevClient ? e.clientY - prevClient.y : 0;
@@ -374,6 +410,7 @@ export function useTsdrawCanvasController(): TsdrawCanvasController {
 
     const handlePointerUp = (e: PointerEvent) => {
       lastPointerClientRef.current = null;
+      updatePointerPreview(e.clientX, e.clientY);
       const { x, y } = getPagePoint(e);
       editor.input.pointerMove(x, y);
       editor.input.pointerUp();
@@ -479,7 +516,7 @@ export function useTsdrawCanvasController(): TsdrawCanvasController {
       window.removeEventListener('keyup', handleKeyUp);
       editorRef.current = null;
     };
-  }, [getPagePointFromClient, refreshSelectionBounds, render]);
+  }, [getPagePointFromClient, refreshSelectionBounds, render, updatePointerPreview]);
 
   const setTool = useCallback(
     (tool: ToolId) => {
@@ -521,8 +558,18 @@ export function useTsdrawCanvasController(): TsdrawCanvasController {
       isMovingSelection,
       isResizingSelection,
       isRotatingSelection,
+      showToolOverlay: isPointerInsideCanvas && (currentTool === 'pen' || currentTool === 'eraser'),
     }),
-    showStylePanel: shouldShowPenStylePanel(currentTool),
+    toolOverlay: {
+      visible: isPointerInsideCanvas && (currentTool === 'pen' || currentTool === 'eraser'),
+      pointerX: pointerScreenPoint.x,
+      pointerY: pointerScreenPoint.y,
+      isPenPreview: currentTool === 'pen',
+      penRadius: Math.max(2, STROKE_WIDTHS[drawSize] / 2),
+      penColor: resolveDrawColor(drawColor),
+      eraserRadius: ERASER_MARGIN,
+    },
+    showStylePanel: currentTool === 'pen',
     setTool,
     applyDrawStyle,
     handleResizePointerDown,

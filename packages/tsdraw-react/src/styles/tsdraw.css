@@ -269,3 +269,27 @@
   z-index: 3;
   pointer-events: auto;
 }
+
+.tsdraw-tool-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 80;
+}
+
+.tsdraw-tool-dot,
+.tsdraw-tool-ring {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.tsdraw-tool-dot {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4);
+}
+
+.tsdraw-tool-ring {
+  border: 1.5px solid rgba(24, 24, 24, 0.85);
+  background: rgba(24, 24, 24, 0.08);
+}

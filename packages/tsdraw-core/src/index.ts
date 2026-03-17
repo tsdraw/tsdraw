@@ -11,6 +11,7 @@ export * from './tools/pen/PenTool.js';
 export * from './tools/pen/states/PenIdleState.js';
 export * from './tools/pen/states/PenDrawingState.js';
 export * from './tools/eraser/EraserTool.js';
+export * from './tools/eraser/eraserHitTest.js';
 export * from './tools/eraser/states/EraserIdleState.js';
 export * from './tools/eraser/states/EraserPointingState.js';
 export * from './tools/eraser/states/EraserErasingState.js';

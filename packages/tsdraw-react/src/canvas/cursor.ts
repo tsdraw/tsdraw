@@ -1,14 +1,16 @@
 import type { ToolId } from 'tsdraw-core';
-import { getEraserCursor, isEraserTool } from '../tools/eraser/eraserTool.js';
-import { getHandCursor, isHandTool } from '../tools/hand/handTool.js';
-import { getPenCursor, isPenTool } from '../tools/pen/penTool.js';
 import { isSelectTool } from 'tsdraw-core';
 
 export function getCanvasCursor(
   currentTool: ToolId,
-  state: { isMovingSelection: boolean; isResizingSelection: boolean; isRotatingSelection: boolean }
+  state: {
+    isMovingSelection: boolean;
+    isResizingSelection: boolean;
+    isRotatingSelection: boolean;
+    showToolOverlay: boolean;
+  }
 ) {
-  if (isHandTool(currentTool)) return getHandCursor();
+  if (currentTool === 'hand') return 'grab';
 
   if (isSelectTool(currentTool)) {
     if (state.isRotatingSelection) return 'grabbing';
@@ -17,8 +19,5 @@ export function getCanvasCursor(
     return 'default';
   }
 
-  if (isEraserTool(currentTool)) return getEraserCursor();
-  if (isPenTool(currentTool)) return getPenCursor();
-
-  return 'default';
+  return state.showToolOverlay ? 'none' : 'crosshair'; // Let tool overlay handle the cursor
 }

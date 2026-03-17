@@ -1,5 +1,6 @@
 import { SelectionOverlay } from './SelectionOverlay.js';
 import { StylePanel } from './StylePanel.js';
+import { ToolOverlay } from './ToolOverlay.js';
 import { Toolbar } from './Toolbar.js';
 import { useTsdrawCanvasController } from '../canvas/useTsdrawCanvasController.js';
 
@@ -22,6 +23,7 @@ export function TsdrawCanvas(props: TsdrawCanvasProps) {
     selectionBounds,
     selectionRotationDeg,
     canvasCursor,
+    toolOverlay,
     showStylePanel,
     setTool,
     applyDrawStyle,
@@ -50,6 +52,15 @@ export function TsdrawCanvas(props: TsdrawCanvasProps) {
           cursor: canvasCursor,
         }}
         data-testid="tsdraw-canvas"
+      />
+      <ToolOverlay
+        visible={toolOverlay.visible}
+        pointerX={toolOverlay.pointerX}
+        pointerY={toolOverlay.pointerY}
+        isPenPreview={toolOverlay.isPenPreview}
+        penRadius={toolOverlay.penRadius}
+        penColor={toolOverlay.penColor}
+        eraserRadius={toolOverlay.eraserRadius}
       />
       <SelectionOverlay
         selectionBrush={selectionBrush}
