@@ -9,6 +9,7 @@
     "apps/*"
   ],
   "scripts": {
+    "build-dev": "npm run build:core && npm run build:react && npm run dev",
     "build": "npm run build --workspaces --if-present",
     "build:core": "npm run build -w packages/tsdraw-core",
     "build:react": "npm run build -w packages/tsdraw-react",

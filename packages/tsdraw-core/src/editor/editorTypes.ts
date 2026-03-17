@@ -1,6 +1,6 @@
 import type { DocumentStore } from '../store/documentStore.js';
 import type { InputManager } from '../input/inputManager.js';
-import type { Shape, DrawShape, ShapeId } from '../types.js';
+import type { Shape, DrawShape, ShapeId, ColorStyle, DashStyle, SizeStyle } from '../types.js';
 import type { Vec3 } from '../types.js';
 
 export interface IEditor {
@@ -16,4 +16,6 @@ export interface IEditor {
   getErasingShapeIds(): ShapeId[];
   setErasingShapes(ids: ShapeId[]): void;
   getCurrentPageRenderingShapesSorted(): import('../types.js').Shape[];
+  getCurrentDrawStyle(): { color: ColorStyle; dash: DashStyle; size: SizeStyle };
+  setCurrentDrawStyle(partial: Partial<{ color: ColorStyle; dash: DashStyle; size: SizeStyle }>): void;
 }

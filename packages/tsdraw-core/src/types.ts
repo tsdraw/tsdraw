@@ -19,6 +19,9 @@ export interface DrawSegment {
 // Available sizes for strokes
 export type SizeStyle = 's' | 'm' | 'l' | 'xl';
 
+// Available dash styles for drawing
+export type DashStyle = 'draw' | 'solid' | 'dashed' | 'dotted';
+
 // Color styles (css-compatible or by palette key)
 export type ColorStyle = string;
 
@@ -30,6 +33,7 @@ export interface DrawShape {
   y: number;
   props: {
     color: ColorStyle;
+    dash: DashStyle;
     size: SizeStyle;
     scale: number;
     isPen: boolean;
@@ -58,6 +62,23 @@ export const STROKE_WIDTHS: Record<SizeStyle, number> = {
 
 // Default drag distance squared for segment-mode transitions
 export const DRAG_DISTANCE_SQUARED = 36;
+
+// Default colors
+export const DEFAULT_COLORS: Record<string, string> = {
+  black: '#1d1d1d',
+  grey: '#9fa8b2',
+  'light-violet': '#e085f4',
+  violet: '#ae3ec9',
+  blue: '#4465e9',
+  'light-blue': '#4ba1f1',
+  yellow: '#f1ac4b',
+  orange: '#e16919',
+  green: '#099268',
+  'light-green': '#4cb05e',
+  'light-red': '#f87777',
+  red: '#e03131',
+  white: '#ffffff',
+};
 
 // Max points per single stroke before starting a new shape
 export const MAX_POINTS_PER_SHAPE = 200;

@@ -1,8 +1,12 @@
 import type { Viewport } from './viewport.js';
 import type { Shape, DrawShape } from '../types.js';
-import { STROKE_WIDTHS } from '../types.js';
+import { STROKE_WIDTHS, DEFAULT_COLORS } from '../types.js';
 import { decodePoints } from '../utils/pathCodec.js';
 import { getStroke } from 'perfect-freehand';
+
+function resolveColor(color: string): string {
+  return DEFAULT_COLORS[color] ?? color;
+}
 
 // Renderer interface: renders shapes given 2d canvas context and viewport
 export interface ICanvasRenderer {
@@ -27,6 +31,12 @@ export class CanvasRenderer implements ICanvasRenderer {
     const width = (STROKE_WIDTHS[shape.props.size] ?? 3.5) * shape.props.scale;
     const samples = flattenSegments(shape);
     if (samples.length === 0) return;
+    const color = resolveColor(shape.props.color);
+
+    if (shape.props.dash !== 'draw') {
+      this.paintDashedStroke(ctx, samples, width, color, shape.props.dash);
+      return;
+    }
 
     const config = strokeConfig(shape, width);
     const outline = getStroke(
@@ -35,7 +45,7 @@ export class CanvasRenderer implements ICanvasRenderer {
     );
     if (outline.length === 0) return;
 
-    ctx.fillStyle = shape.props.color;
+    ctx.fillStyle = color;
     ctx.beginPath();
     const first = outline[0];
     if (!first) return;
@@ -46,6 +56,38 @@ export class CanvasRenderer implements ICanvasRenderer {
     }
     ctx.closePath();
     ctx.fill();
+  }
+
+  private paintDashedStroke(
+    ctx: CanvasRenderingContext2D,
+    samples: Array<{ x: number; y: number }>,
+    width: number,
+    color: string,
+    dash: DrawShape['props']['dash']
+  ): void {
+    if (samples.length === 1) {
+      const p = samples[0]!;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, width / 2, 0, Math.PI * 2);
+      ctx.fill();
+      return;
+    }
+
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.setLineDash(getLineDash(dash, width));
+    ctx.beginPath();
+    ctx.moveTo(samples[0]!.x, samples[0]!.y);
+    for (let i = 1; i < samples.length; i++) {
+      const p = samples[i]!;
+      ctx.lineTo(p.x, p.y);
+    }
+    ctx.stroke();
+    ctx.restore();
   }
 }
 
@@ -137,4 +179,15 @@ function flattenSegments(shape: DrawShape) {
     for (const p of out) p.pressure = 0.5;
   }
   return out;
+}
+
+function getLineDash(dash: DrawShape['props']['dash'], width: number): number[] {
+  switch (dash) {
+    case 'dashed': return [width * 2, width * 2];
+    case 'dotted': return [Math.max(1, width * 0.25), width * 2];
+    case 'solid':
+    case 'draw':
+    default:
+      return [];
+  }
 }

@@ -9,7 +9,7 @@ import { PenDrawingState } from '../tools/pen/states/PenDrawingState.js';
 import { EraserIdleState } from '../tools/eraser/states/EraserIdleState.js';
 import { EraserPointingState } from '../tools/eraser/states/EraserPointingState.js';
 import { EraserErasingState } from '../tools/eraser/states/EraserErasingState.js';
-import type { ShapeId, Shape, DrawShape } from '../types.js';
+import type { ShapeId, Shape, DrawShape, ColorStyle, DashStyle, SizeStyle } from '../types.js';
 import type { Vec3 } from '../types.js';
 import { DRAG_DISTANCE_SQUARED } from '../types.js';
 
@@ -30,6 +30,12 @@ export class Editor {
   readonly renderer: CanvasRenderer = new CanvasRenderer();
   viewport: Viewport = createViewport();
   readonly options: { dragDistanceSquared: number };
+  // Default draw style
+  private drawStyle: { color: ColorStyle; dash: DashStyle; size: SizeStyle } = {
+    color: 'black',
+    dash: 'draw',
+    size: 'm',
+  };
 
   constructor(opts: EditorOptions = {}) {
     this.options = { dragDistanceSquared: opts.dragDistanceSquared ?? DRAG_DISTANCE_SQUARED };
@@ -76,6 +82,9 @@ export class Editor {
 
   setCurrentTool(id: ToolId) { this.tools.setCurrentTool(id); }
   getCurrentToolId(): ToolId { return this.tools.getCurrentToolId(); }
+  
+  getCurrentDrawStyle() { return { ...this.drawStyle }; }
+  setCurrentDrawStyle(partial: Partial<{ color: ColorStyle; dash: DashStyle; size: SizeStyle }>) { this.drawStyle = { ...this.drawStyle, ...partial }; }
 
   // Convert screen coords to page coords
   screenToPage(screenX: number, screenY: number): { x: number; y: number } {

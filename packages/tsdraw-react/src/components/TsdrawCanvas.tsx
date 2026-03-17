@@ -1,12 +1,20 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { IconEraser, IconPencil } from '@tabler/icons-react';
-import { Editor } from 'tsdraw-core';
+import { Editor, DEFAULT_COLORS } from 'tsdraw-core';
+import type { ColorStyle, DashStyle, SizeStyle } from 'tsdraw-core';
 
 export interface TsdrawCanvasProps {
   width?: number | string;
   height?: number | string;
   className?: string;
 }
+
+const STYLE_COLORS = Object.entries(DEFAULT_COLORS)
+  .filter(([key]) => key !== 'white')
+  .map(([value, solid]) => ({ value, solid }));
+
+const STYLE_DASHES: DashStyle[] = ['draw', 'solid', 'dashed', 'dotted'];
+const STYLE_SIZES: SizeStyle[] = ['s', 'm', 'l', 'xl'];
 
 // Main canvas component: drawing surface with toolbar
 export function TsdrawCanvas(props: TsdrawCanvasProps) {
@@ -15,6 +23,9 @@ export function TsdrawCanvas(props: TsdrawCanvasProps) {
   const editorRef = useRef<Editor | null>(null);
   const dprRef = useRef(1);
   const [currentTool, setCurrentTool] = useState<'pen' | 'eraser'>('pen');
+  const [drawColor, setDrawColor] = useState<ColorStyle>('black');
+  const [drawDash, setDrawDash] = useState<DashStyle>('draw');
+  const [drawSize, setDrawSize] = useState<SizeStyle>('m');
 
   const render = useCallback(() => {
     const canvas = canvasRef.current;
@@ -35,6 +46,11 @@ export function TsdrawCanvas(props: TsdrawCanvasProps) {
 
     const editor = new Editor();
     editorRef.current = editor;
+
+    const initialStyle = editor.getCurrentDrawStyle();
+    setDrawColor(initialStyle.color);
+    setDrawDash(initialStyle.dash);
+    setDrawSize(initialStyle.size);
 
     const resize = () => {
       const dpr = window.devicePixelRatio ?? 1;
@@ -138,6 +154,19 @@ export function TsdrawCanvas(props: TsdrawCanvasProps) {
     }
   }, []);
 
+  const applyDrawStyle = useCallback(
+    (partial: Partial<{ color: ColorStyle; dash: DashStyle; size: SizeStyle }>) => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      editor.setCurrentDrawStyle(partial);
+      if (partial.color) setDrawColor(partial.color);
+      if (partial.dash) setDrawDash(partial.dash);
+      if (partial.size) setDrawSize(partial.size);
+      render();
+    },
+    [render]
+  );
+
   return (
     <div
       ref={containerRef}
@@ -160,6 +189,62 @@ export function TsdrawCanvas(props: TsdrawCanvasProps) {
         }}
         data-testid="tsdraw-canvas"
       />
+      {currentTool === 'pen' && (
+        <div className="tsdraw-style-panel" aria-label="Draw style panel">
+          <div className="tsdraw-style-colors">
+            {STYLE_COLORS.map((item) => (
+              <button
+                key={item.value}
+                type="button"
+                className="tsdraw-style-color"
+                data-active={drawColor === item.value ? 'true' : undefined}
+                aria-label={`Color ${item.value}`}
+                title={item.value}
+                onClick={() => applyDrawStyle({ color: item.value })}
+              >
+                <span
+                  className="tsdraw-style-color-dot"
+                  style={{ background: item.solid }}
+                />
+              </button>
+            ))}
+          </div>
+          <div className="tsdraw-style-section">
+            {STYLE_DASHES.map((dash) => (
+              <button
+                key={dash}
+                type="button"
+                className="tsdraw-style-row"
+                data-active={drawDash === dash ? 'true' : undefined}
+                aria-label={`Stroke ${dash}`}
+                title={dash}
+                onClick={() => applyDrawStyle({ dash })}
+              >
+                <span className="tsdraw-style-preview">
+                  <span className={`tsdraw-style-preview-line tsdraw-style-preview-line--${dash}`} />
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="tsdraw-style-section">
+            {STYLE_SIZES.map((size) => (
+              <button
+                key={size}
+                type="button"
+                className="tsdraw-style-row"
+                data-active={drawSize === size ? 'true' : undefined}
+                aria-label={`Thickness ${size}`}
+                title={size}
+                onClick={() => applyDrawStyle({ size })}
+              >
+                <span className="tsdraw-style-preview">
+                  <span className={`tsdraw-style-size tsdraw-style-size--${size}`} />
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="tsdraw-toolbar">
         <button
           type="button"
@@ -169,7 +254,11 @@ export function TsdrawCanvas(props: TsdrawCanvasProps) {
           title="Pen"
           aria-label="Pen"
         >
-          <IconPencil size={18} stroke={1.8} />
+          <IconPencil 
+            size={18} 
+            stroke={1.8} 
+            fill={currentTool === 'pen' ? 'currentColor' : 'none'} 
+          />
         </button>
         <button
           type="button"
@@ -179,7 +268,11 @@ export function TsdrawCanvas(props: TsdrawCanvasProps) {
           title="Eraser"
           aria-label="Eraser"
         >
-          <IconEraser size={18} stroke={1.8} />
+          <IconEraser 
+            size={18} 
+            stroke={1.8} 
+            fill={currentTool === 'eraser' ? 'currentColor' : 'none'} 
+          />
         </button>
       </div>
     </div>

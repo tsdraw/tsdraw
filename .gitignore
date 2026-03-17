@@ -7,5 +7,5 @@ dist
 *.log
 coverage
 .vite
-.references
+references
 .design

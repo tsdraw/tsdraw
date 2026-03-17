@@ -6,9 +6,6 @@ import { dist, sqDist, withinRadius, toFixed, roundPt, lerpPath, tail, quantizeA
 
 type StrokePhase = 'free' | 'straight' | 'starting_straight' | 'starting_free';
 
-const DEFAULT_COLOR = '#000000';
-const DEFAULT_SIZE = 'm' as const;
-
 // State for when pen is being used
 export class PenDrawingState extends StateNode {
   static override id = 'pen_drawing';
@@ -195,6 +192,7 @@ export class PenDrawingState extends StateNode {
   // Create a new shape, when we need a new drawing shape 
   private spawnShape(originPt: Vec3, pressure: number): void {
     this._anchor = { ...originPt };
+    const drawStyle = this.editor.getCurrentDrawStyle();
     const id = this.editor.createShapeId();
     const firstPt: Vec3 = { x: 0, y: 0, z: pressure };
     this._activePts = [firstPt];
@@ -204,8 +202,9 @@ export class PenDrawingState extends StateNode {
       x: originPt.x,
       y: originPt.y,
       props: {
-        color: DEFAULT_COLOR,
-        size: DEFAULT_SIZE,
+        color: drawStyle.color,
+        dash: drawStyle.dash,
+        size: drawStyle.size,
         scale: 1,
         isPen: this._hasPressure,
         isComplete: false,
@@ -402,6 +401,7 @@ export class PenDrawingState extends StateNode {
             y: curPage.y,
             props: {
               color: shape.props.color,
+              dash: shape.props.dash,
               size: shape.props.size,
               scale: shape.props.scale,
               isPen: this._hasPressure,
