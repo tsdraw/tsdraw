@@ -70,6 +70,7 @@ export function App() {
         width="100%"
         height="100%"
         theme="light"
+        persistenceKey="ts-demo"
         tools={['select', 'pen', wavyTool, 'eraser', 'hand']}
         initialToolId="pen"
         uiOptions={{
@@ -77,7 +78,7 @@ export function App() {
             placement: { anchor: 'top-center', offsetX: 18, offsetY: 18 },
           },
           stylePanel: {
-            placement: { anchor: 'bottom-left', offsetX: 16, offsetY: 16 },
+            placement: { anchor: 'top-right', offsetX: 16, offsetY: 16 },
           },
           customElements: [confettiButton, randomStyleButton],
         }}

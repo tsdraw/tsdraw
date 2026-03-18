@@ -92,6 +92,7 @@ export interface TsdrawProps {
   className?: string;
   style?: CSSProperties;
   theme?: 'light' | 'dark' | 'system';
+  persistenceKey?: string;
   tools?: TsdrawToolItem[];
   initialToolId?: ToolId;
   uiOptions?: TsdrawUiOptions;
@@ -229,6 +230,7 @@ export function Tsdraw(props: TsdrawProps) {
     toolDefinitions,
     initialTool,
     theme: resolvedTheme,
+    persistenceKey: props.persistenceKey,
     stylePanelToolIds,
     onMount: props.onMount,
   });

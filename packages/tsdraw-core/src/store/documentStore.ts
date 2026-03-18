@@ -1,6 +1,16 @@
 import type { PageState, Shape, ShapeId } from '../types.js';
 import { STROKE_WIDTHS } from '../types.js';
 import { decodePathToPoints } from '../utils/pathCodec.js';
+import type { DocumentStoreSnapshot } from '../persistence/snapshots.js';
+
+type DocumentStoreListener = () => void;
+
+function cloneValue<T>(value: T): T {
+  if (typeof structuredClone === 'function') {
+    return structuredClone(value);
+  }
+  return JSON.parse(JSON.stringify(value)) as T;
+}
 
 // In-memory document store for current page
 export class DocumentStore {
@@ -10,6 +20,7 @@ export class DocumentStore {
     erasingShapeIds: [],
   };
   private order: ShapeId[] = [];
+  private readonly listeners = new Set<DocumentStoreListener>();
 
   getPage(): PageState {
     return this.state;
@@ -38,17 +49,20 @@ export class DocumentStore {
 
   setErasingShapes(ids: ShapeId[]): void {
     this.state.erasingShapeIds = ids;
+    this.emitChange();
   }
 
   createShape(shape: Shape): void {
     this.state.shapes[shape.id] = shape;
     this.order.push(shape.id);
+    this.emitChange();
   }
 
   updateShape(id: ShapeId, partial: Partial<Shape>): void {
     const existing = this.state.shapes[id];
     if (!existing) return;
     this.state.shapes[id] = { ...existing, ...partial, id };
+    this.emitChange();
   }
 
   deleteShapes(ids: ShapeId[]): void {
@@ -57,6 +71,7 @@ export class DocumentStore {
       this.order = this.order.filter((i) => i !== id);
     }
     this.state.erasingShapeIds = this.state.erasingShapeIds.filter((i) => !ids.includes(i));
+    this.emitChange();
   }
 
   getCurrentPageShapes(): Shape[] {
@@ -78,6 +93,39 @@ export class DocumentStore {
       }
     }
     return ids;
+  }
+
+  getSnapshot(): DocumentStoreSnapshot {
+    return {
+      page: cloneValue(this.state),
+      order: [...this.order],
+    };
+  }
+
+  // Load snapshot into the document when loading a persistence snapshot (so on page reload)
+  loadSnapshot(snapshot: DocumentStoreSnapshot): void {
+    const pageState = cloneValue(snapshot.page);
+    const normalizedOrder = [...snapshot.order].filter((shapeId) => pageState.shapes[shapeId] != null);
+    this.state = {
+      id: pageState.id,
+      shapes: pageState.shapes,
+      erasingShapeIds: pageState.erasingShapeIds.filter((shapeId) => pageState.shapes[shapeId] != null),
+    };
+    this.order = normalizedOrder;
+    this.emitChange();
+  }
+
+  listen(listener: DocumentStoreListener): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  private emitChange(): void {
+    for (const listener of this.listeners) {
+      listener();
+    }
   }
 }
 
