@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
@@ -80,27 +80,30 @@ function publishWorkspace(workspace, packageName, packageVersion) {
     return;
   }
 
-  try {
-    execFileSync('npm', publishArgs, {
-      cwd: repoRoot,
-      stdio: 'inherit',
-      env: process.env,
-    });
-  } catch (error) {
-    const stderr = error instanceof Error && 'stderr' in error ? String(error.stderr) : '';
-    const stdout = error instanceof Error && 'stdout' in error ? String(error.stdout) : '';
-    const combinedOutput = `${stdout}\n${stderr}`;
+  const result = spawnSync('npm', publishArgs, {
+    cwd: repoRoot,
+    env: process.env,
+    encoding: 'utf8',
+  });
 
-    if (
-      combinedOutput.includes('cannot publish over the previously published versions') ||
-      combinedOutput.includes('You cannot publish over the previously published version')
-    ) {
-      console.log(`${packageName}@${packageVersion} is already published. Skipping.`);
-      return;
-    }
+  if (result.stdout) process.stdout.write(result.stdout);
+  if (result.stderr) process.stderr.write(result.stderr);
 
-    throw error;
+  const combinedOutput = `${result.stdout ?? ''}\n${result.stderr ?? ''}`;
+
+  if (result.status === 0) {
+    return;
   }
+
+  if (
+    combinedOutput.includes('cannot publish over the previously published versions') ||
+    combinedOutput.includes('You cannot publish over the previously published version')
+  ) {
+    console.log(`${packageName}@${packageVersion} is already published. Skipping.`);
+    return;
+  }
+
+  throw new Error(`npm publish failed for ${packageName}@${packageVersion}`);
 }
 
 const corePackageJson = readJson('packages/tsdraw-core/package.json');
