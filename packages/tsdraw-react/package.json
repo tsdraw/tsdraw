@@ -1,6 +1,6 @@
 {
   "name": "@tsdraw/react",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "@tsdraw/react - React components and hooks for tsdraw",
   "repository": {
     "type": "git",
@@ -45,7 +45,7 @@
   },
   "dependencies": {
     "@tabler/icons-react": "^3.40.0",
-    "@tsdraw/core": "0.5.0"
+    "@tsdraw/core": "0.5.1"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",

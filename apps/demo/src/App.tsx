@@ -11,8 +11,8 @@ import './App.css';
 const wavyTool: TsdrawCustomTool = {
   id: 'wavy',
   label: 'Wavy',
-  icon: <IconStar size={18} />,
-  iconSelected: <IconStarFilled size={18} />,
+  icon: <IconStar size={16} />,
+  iconSelected: <IconStarFilled size={16} />,
   definition: wavyToolDefinition,
   showStylePanel: true,
 };

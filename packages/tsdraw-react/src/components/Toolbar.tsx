@@ -16,10 +16,10 @@ interface ToolbarProps {
 }
 
 export function getDefaultToolbarIcon(toolId: ToolId, isActive: boolean): ReactNode {
-  if (toolId === 'select') return <IconPointer size={18} stroke={1.8} fill={isActive ? 'currentColor' : 'none'} />;
-  if (toolId === 'pen') return <IconPencil size={18} stroke={1.8} fill={isActive ? 'currentColor' : 'none'} />;
-  if (toolId === 'eraser') return <IconEraser size={18} stroke={1.8} fill={isActive ? 'currentColor' : 'none'} />;
-  if (toolId === 'hand') return <IconHandStop size={18} stroke={isActive ? 1 : 1.8} fill={isActive ? 'currentColor' : 'none'} style={isActive ? { stroke: '#000000' } : undefined} />;
+  if (toolId === 'select') return <IconPointer size={16} stroke={1.8} fill={isActive ? 'currentColor' : 'none'} />;
+  if (toolId === 'pen') return <IconPencil size={16} stroke={1.8} fill={isActive ? 'currentColor' : 'none'} />;
+  if (toolId === 'eraser') return <IconEraser size={16} stroke={1.8} fill={isActive ? 'currentColor' : 'none'} />;
+  if (toolId === 'hand') return <IconHandStop size={16} stroke={isActive ? 1 : 1.8} fill={isActive ? 'currentColor' : 'none'} style={isActive ? { stroke: '#000000' } : undefined} />;
   return null;
 }
 

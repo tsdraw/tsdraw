@@ -235,7 +235,7 @@ export function Tsdraw(props: TsdrawProps) {
     onMount: props.onMount,
   });
 
-  const toolbarPlacementStyle = resolvePlacementStyle(props.uiOptions?.toolbar?.placement, 'bottom-center', 0, 16);
+  const toolbarPlacementStyle = resolvePlacementStyle(props.uiOptions?.toolbar?.placement, 'bottom-center', 0, 14);
   const stylePanelPlacementStyle = resolvePlacementStyle(props.uiOptions?.stylePanel?.placement, 'top-right', 8, 8);
   const canvasCursor = props.uiOptions?.cursor?.getCursor?.(cursorContext) ?? defaultCanvasCursor;
   const defaultToolOverlay = (

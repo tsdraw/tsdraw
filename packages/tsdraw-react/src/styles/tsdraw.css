@@ -25,20 +25,20 @@
 }
 
 .tsdraw.tsdraw-darkmode {
-  --tsdraw-color-bg: #111317;
-  --tsdraw-color-panel: #1a1d23;
-  --tsdraw-color-muted: #262b33;
-  --tsdraw-color-selected: #f5f7fb;
-  --tsdraw-color-selected-text: #111317;
-  --tsdraw-color-border: #303641;
-  --tsdraw-color-text: #eef2f7;
-  --tsdraw-color-active-surface: #2c323c;
-  --tsdraw-color-preview: #eef2f7;
+  --tsdraw-color-bg: #0f0f0f;
+  --tsdraw-color-panel: #171717;
+  --tsdraw-color-muted: #232323;
+  --tsdraw-color-selected: #f2f2f2;
+  --tsdraw-color-selected-text: #151515;
+  --tsdraw-color-border: #2f2f2f;
+  --tsdraw-color-text: #ececec;
+  --tsdraw-color-active-surface: #2b2b2b;
+  --tsdraw-color-preview: #ececec;
   --tsdraw-color-panel-highlight: rgba(255, 255, 255, 0.06);
   --tsdraw-color-panel-shadow: rgba(0, 0, 0, 0.35);
   --tsdraw-color-panel-shadow-strong: rgba(0, 0, 0, 0.28);
   --tsdraw-color-selection-contrast: rgba(255, 255, 255, 0.15);
-  --tsdraw-color-handle-fill: #1a1d23;
+  --tsdraw-color-handle-fill: #171717;
   --tsdraw-color-tool-dot-outline: rgba(255, 255, 255, 0.2);
   --tsdraw-color-tool-ring-border: rgba(255, 255, 255, 0.75);
   --tsdraw-color-tool-ring-fill: rgba(255, 255, 255, 0.08);
@@ -48,7 +48,7 @@
   position: absolute;
   display: flex;
   gap: 2px;
-  padding: 4px;
+  padding: 3.5px;
   background: var(--tsdraw-color-panel);
   border-radius: var(--tsdraw-radius);
   border: 1px solid var(--tsdraw-color-border);
@@ -58,10 +58,10 @@
 }
 
 .tsdraw-toolbar button {
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   border: none;
-  border-radius: 10px;
+  border-radius: 9px;
   background: transparent;
   color: var(--tsdraw-color-text);
   cursor: pointer;
@@ -77,17 +77,17 @@
 }
 
 .tsdraw-toolbar-btn {
-  width: 48px;
-  min-width: 48px;
-  height: 48px;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
   padding: 0;
   display: grid;
   place-items: center;
 }
 
 .tsdraw-toolbar-btn svg {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
 }
 
 .tsdraw-style-panel {
@@ -182,7 +182,7 @@
 }
 
 .tsdraw.tsdraw-darkmode .tsdraw-style-preview-line--draw {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='10' viewBox='0 0 12 10'%3E%3Cpath d='M0 5 C2 1 4 9 6 5 C8 1 10 9 12 5' stroke='%23eef2f7' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='10' viewBox='0 0 12 10'%3E%3Cpath d='M0 5 C2 1 4 9 6 5 C8 1 10 9 12 5' stroke='%23ececec' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
 }
 
 .tsdraw-style-preview-line--solid {
