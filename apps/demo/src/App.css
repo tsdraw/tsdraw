@@ -1,7 +1,7 @@
 .custom-btn {
     font-size: 20px;
     padding: 0 23px;
-    height: 58px;
+    height: 53px;
     cursor: pointer;
     background: var(--tsdraw-color-panel);
     color: var(--tsdraw-color-text);

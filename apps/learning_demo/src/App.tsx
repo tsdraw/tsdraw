@@ -37,7 +37,7 @@ export function App() {
         persistenceKey={String(activeProblem.id)}
         uiOptions={{
           toolbar: {
-            placement: { anchor: 'top-center', offsetX: 0, offsetY: 16 },
+            placement: { anchor: 'top-center', offsetX: 0, offsetY: 18 },
           },
           customElements: [
             {

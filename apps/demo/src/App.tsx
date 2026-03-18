@@ -75,10 +75,10 @@ export function App() {
         initialToolId="pen"
         uiOptions={{
           toolbar: { // top-left, bottom-center, center-right, left-center, ... (it can be any valid anchor)
-            placement: { anchor: 'top-center', offsetX: 18, offsetY: 18 },
+            placement: { anchor: 'top-center', offsetX: 0, offsetY: 18 },
           },
           stylePanel: {
-            placement: { anchor: 'top-right', offsetX: 16, offsetY: 16 },
+            placement: { anchor: 'top-right', offsetX: 18, offsetY: 18 },
           },
           customElements: [confettiButton, randomStyleButton],
         }}
