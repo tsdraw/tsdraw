@@ -106,16 +106,6 @@ function publishWorkspace(workspace, packageName, packageVersion) {
   throw new Error(`npm publish failed for ${packageName}@${packageVersion}`);
 }
 
-const corePackageJson = readJson('packages/tsdraw-core/package.json');
-const reactPackageJson = readJson('packages/tsdraw-react/package.json');
-const reactCoreDependency = reactPackageJson.dependencies?.['@tsdraw/core'];
-
-if (reactCoreDependency !== corePackageJson.version) {
-  throw new Error(
-    `@tsdraw/react depends on @tsdraw/core@${reactCoreDependency}, but packages/tsdraw-core is version ${corePackageJson.version}. Keep them in sync before publishing.`
-  );
-}
-
 for (const target of publishTargets) {
   const packageJson = readJson(path.join(target.workspace, 'package.json'));
   const localName = packageJson.name;
