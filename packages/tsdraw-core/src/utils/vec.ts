@@ -24,6 +24,7 @@ export function roundPt(p: Vec3): Vec3 {
 
 // Calculate bwtween two interpolated points
 export function lerpPath(from: Vec3, to: Vec3, steps: number): Vec3[] {
+  if (steps <= 0) return [{ x: toFixed(from.x), y: toFixed(from.y), z: from.z }];
   const result: Vec3[] = [];
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
