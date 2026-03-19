@@ -377,6 +377,7 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
         history: editor.getHistorySnapshot(),
         sessionId,
       });
+      if (disposed) return;
       persistenceChannel?.postMessage({
         type: 'tsdraw:persisted',
         senderSessionId: sessionId,
