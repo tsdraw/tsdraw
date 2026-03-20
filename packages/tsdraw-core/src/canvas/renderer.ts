@@ -21,6 +21,7 @@ export class CanvasRenderer implements ICanvasRenderer {
   render(ctx: CanvasRenderingContext2D, viewport: Viewport, shapes: Shape[]): void {
     ctx.save();
     ctx.translate(viewport.x, viewport.y);
+    ctx.rotate(viewport.rotation);
     ctx.scale(viewport.zoom, viewport.zoom);
     for (const shape of shapes) {
       if (shape.type === 'draw') {
@@ -217,9 +218,6 @@ function flattenSegments(shape: DrawShape) {
     out.push(D);
   }
 
-  if (out.length > 0 && !shape.props.isPen) {
-    for (const p of out) p.pressure = 0.5;
-  }
   return out;
 }
 

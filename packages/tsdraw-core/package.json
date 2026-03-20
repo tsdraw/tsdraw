@@ -1,6 +1,6 @@
 {
   "name": "@tsdraw/core",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "the core engine for tsdraw",
   "repository": {
     "type": "git",

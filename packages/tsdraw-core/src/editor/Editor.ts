@@ -1,6 +1,6 @@
 import { DocumentStore } from '../store/documentStore.js';
 import type { Viewport } from '../canvas/viewport.js';
-import { createViewport, screenToPage } from '../canvas/viewport.js';
+import { createViewport, rotateViewport, screenToPage, zoomViewport } from '../canvas/viewport.js';
 import { CanvasRenderer } from '../canvas/renderer.js';
 import { InputManager } from '../input/inputManager.js';
 import type { ToolStateContext } from '../store/stateNode.js';
@@ -197,6 +197,7 @@ export class Editor {
       x: partial.x ?? this.viewport.x,
       y: partial.y ?? this.viewport.y,
       zoom: Math.max(0.1, Math.min(4, rawZoom)),
+      rotation: partial.rotation ?? this.viewport.rotation,
     };
     this.emitChange();
   }
@@ -206,6 +207,21 @@ export class Editor {
       x: this.viewport.x + dx,
       y: this.viewport.y + dy,
     });
+  }
+
+  zoomAt(factor: number, screenX: number, screenY: number): void {
+    this.viewport = zoomViewport(this.viewport, factor, screenX, screenY);
+    this.emitChange();
+  }
+
+  rotateAt(delta: number, screenX: number, screenY: number): void {
+    this.viewport = rotateViewport(this.viewport, delta, screenX, screenY);
+    this.emitChange();
+  }
+
+  deleteShapes(ids: ShapeId[]): void {
+    if (ids.length === 0) return;
+    this.store.deleteShapes(ids);
   }
 
   getDocumentSnapshot(): TsdrawDocumentSnapshot {
@@ -227,6 +243,7 @@ export class Editor {
         x: this.viewport.x,
         y: this.viewport.y,
         zoom: this.viewport.zoom,
+        rotation: this.viewport.rotation,
       },
       currentToolId: this.getCurrentToolId(),
       drawStyle: this.getCurrentDrawStyle(),
@@ -235,7 +252,10 @@ export class Editor {
   }
 
   loadSessionStateSnapshot(snapshot: TsdrawSessionStateSnapshot): ShapeId[] {
-    this.setViewport(snapshot.viewport);
+    this.setViewport({
+      ...snapshot.viewport,
+      rotation: snapshot.viewport.rotation ?? 0,
+    });
     this.setCurrentDrawStyle({
       color: snapshot.drawStyle.color,
       dash: snapshot.drawStyle.dash,

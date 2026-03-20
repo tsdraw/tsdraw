@@ -5,6 +5,7 @@ import {
   Editor,
   ERASER_MARGIN,
   STROKE_WIDTHS,
+  pageToScreen,
   normalizeSelectionBounds,
   applyMove,
   applyResize,
@@ -21,6 +22,8 @@ import {
 } from '@tsdraw/core';
 import type { ColorStyle, DashStyle, FillStyle, ShapeId, SizeStyle, SelectionBounds, TsdrawDocumentSnapshot, TsdrawEditorSnapshot } from '@tsdraw/core';
 import { getCanvasCursor } from './cursor.js';
+import { createTouchInteractionController } from './touchInteractions.js';
+import { handleKeyboardShortcutKeyDown, handleKeyboardShortcutKeyUp } from './keyboardShortcuts.js';
 import type { ScreenRect } from '../types.js';
 import { TsdrawLocalIndexedDb } from '../persistence/localIndexedDb.js';
 import { getOrCreateSessionId } from '../persistence/sessionId.js';
@@ -94,12 +97,19 @@ export interface TsdrawCanvasController {
 }
 
 function toScreenRect(editor: Editor, bounds: SelectionBounds): ScreenRect {
-  const { x, y, zoom } = editor.viewport;
+  const topLeft = pageToScreen(editor.viewport, bounds.minX, bounds.minY);
+  const topRight = pageToScreen(editor.viewport, bounds.maxX, bounds.minY);
+  const bottomLeft = pageToScreen(editor.viewport, bounds.minX, bounds.maxY);
+  const bottomRight = pageToScreen(editor.viewport, bounds.maxX, bounds.maxY);
+  const minX = Math.min(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x);
+  const minY = Math.min(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y);
+  const maxX = Math.max(topLeft.x, topRight.x, bottomLeft.x, bottomRight.x);
+  const maxY = Math.max(topLeft.y, topRight.y, bottomLeft.y, bottomRight.y);
   return {
-    left: bounds.minX * zoom + x,
-    top: bounds.minY * zoom + y,
-    width: (bounds.maxX - bounds.minX) * zoom,
-    height: (bounds.maxY - bounds.minY) * zoom,
+    left: minX,
+    top: minY,
+    width: Math.max(0, maxX - minX),
+    height: Math.max(0, maxY - minY),
   };
 }
 
@@ -107,12 +117,18 @@ function resolveDrawColor(colorStyle: ColorStyle, theme: 'light' | 'dark'): stri
   return resolveThemeColor(colorStyle, theme);
 }
 
+const ZOOM_WHEEL_CAP = 10;
+
 export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOptions = {}): TsdrawCanvasController {
   const onMountRef = useRef(options.onMount);
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const editorRef = useRef<Editor | null>(null);
   const dprRef = useRef(1);
+  const penDetectedRef = useRef(false);
+  const penModeRef = useRef(false);
+  const lastPointerDownWithRef = useRef<'mouse' | 'touch' | 'pen'>('mouse');
+  const activePointerIdsRef = useRef(new Set<number>());
   const lastPointerClientRef = useRef<{ x: number; y: number } | null>(null);
   const currentToolRef = useRef<ToolId>(options.initialTool ?? 'pen');
   const selectedShapeIdsRef = useRef<ShapeId[]>([]);
@@ -457,8 +473,101 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
       return coalesced && coalesced.length > 0 ? coalesced : [e];
     };
 
+    const applyDocumentChangeResult = (changed: boolean) => {
+      if (!changed) return false;
+      reconcileSelectionAfterDocumentLoad();
+      setSelectionRotationDeg(0);
+      render();
+      syncHistoryState();
+      return true;
+    };
+
+    const normalizeWheelDelta = (event: WheelEvent) => {
+      let deltaX = event.deltaX;
+      let deltaY = event.deltaY;
+      let deltaZoom = 0;
+      if (event.ctrlKey || event.metaKey || event.altKey) {
+        const clamped = Math.abs(deltaY) > ZOOM_WHEEL_CAP ? ZOOM_WHEEL_CAP * Math.sign(deltaY) : deltaY;
+        deltaZoom = -clamped / 100;
+      } else if (event.shiftKey && !navigator.userAgent.includes('Mac') && !navigator.userAgent.includes('iPhone') && !navigator.userAgent.includes('iPad')) {
+        deltaX = deltaY;
+        deltaY = 0;
+      }
+      return { x: -deltaX, y: -deltaY, z: deltaZoom };
+    };
+
+    const deleteCurrentSelection = () => {
+      const selectedIds = selectedShapeIdsRef.current;
+      if (selectedIds.length === 0) return false;
+      editor.beginHistoryEntry();
+      editor.deleteShapes(selectedIds);
+      editor.endHistoryEntry();
+      setSelectedShapeIds([]);
+      selectedShapeIdsRef.current = [];
+      setSelectionBounds(null);
+      setSelectionBrush(null);
+      setSelectionRotationDeg(0);
+      render();
+      syncHistoryState();
+      return true;
+    };
+
+    const cancelActivePointerInteraction = () => {
+      if (!isPointerActiveRef.current) return;
+      isPointerActiveRef.current = false;
+      lastPointerClientRef.current = null;
+      editor.input.pointerUp();
+      if (currentToolRef.current === 'select') {
+        const dragMode = selectDragRef.current.mode;
+        if (dragMode === 'rotate') setIsRotatingSelection(false);
+        if (dragMode === 'resize') setIsResizingSelection(false);
+        if (dragMode === 'move') setIsMovingSelection(false);
+        if (dragMode === 'marquee') setSelectionBrush(null);
+        selectDragRef.current.mode = 'none';
+      } else {
+        editor.tools.pointerUp();
+      }
+      editor.endHistoryEntry();
+      render();
+      refreshSelectionBounds(editor);
+    };
+    const touchInteractions = createTouchInteractionController(editor, canvas, {
+      cancelActivePointerInteraction,
+      refreshView: () => {
+        render();
+        refreshSelectionBounds(editor);
+      },
+      runUndo: () => applyDocumentChangeResult(editor.undo()),
+      runRedo: () => applyDocumentChangeResult(editor.redo()),
+    });
+
+    const isDrawingTool = (tool: ToolId) => tool !== 'select' && tool !== 'hand';
+    const hasRealPressure = (pressure: number | undefined) => pressure != null && pressure > 0 && pressure !== 0.5;
+
     const handlePointerDown = (e: PointerEvent) => {
       if (!canvas.contains(e.target as Node)) return;
+
+      if (!penDetectedRef.current && (e.pointerType === 'pen' || hasRealPressure(e.pressure))) {
+        penDetectedRef.current = true;
+        penModeRef.current = true;
+      }
+      lastPointerDownWithRef.current = e.pointerType as 'mouse' | 'touch' | 'pen';
+      activePointerIdsRef.current.add(e.pointerId);
+
+      const startedCameraGesture = touchInteractions.handlePointerDown(e);
+      if (startedCameraGesture || touchInteractions.isCameraGestureActive()) {
+        e.preventDefault();
+        if (!canvas.hasPointerCapture(e.pointerId)) {
+          canvas.setPointerCapture(e.pointerId);
+        }
+        return;
+      }
+
+      const allowPointerDown = !penModeRef.current || e.pointerType !== 'touch' || !isDrawingTool(currentToolRef.current);
+
+      if (!allowPointerDown) { return; }
+      if (activePointerIdsRef.current.size > 1) { return; }
+
       isPointerActiveRef.current = true;
       editor.beginHistoryEntry();
       canvas.setPointerCapture(e.pointerId);
@@ -468,7 +577,7 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
       const first = sampleEvents(e)[0]!;
       const { x, y } = getPagePoint(first);
       const pressure = first.pressure ?? 0.5;
-      const isPen = first.pointerType === 'pen' || first.pointerType === 'touch';
+      const isPen = first.pointerType === 'pen' || hasRealPressure(first.pressure);
 
       if (currentToolRef.current === 'select') {
         const hit = getTopShapeAtPoint(editor, { x, y });
@@ -513,6 +622,16 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
     };
 
     const handlePointerMove = (e: PointerEvent) => {
+      if (!penDetectedRef.current && (e.pointerType === 'pen' || hasRealPressure(e.pressure))) {
+        penDetectedRef.current = true;
+        penModeRef.current = true;
+      }
+      if (touchInteractions.handlePointerMove(e)) {
+        e.preventDefault();
+        return;
+      }
+      if (penModeRef.current && e.pointerType === 'touch' && isDrawingTool(currentToolRef.current) && !isPointerActiveRef.current) return;
+      if (activePointerIdsRef.current.size > 1) return;
       updatePointerPreview(e.clientX, e.clientY);
       const prevClient = lastPointerClientRef.current;
       const dx = prevClient ? e.clientX - prevClient.x : 0;
@@ -522,7 +641,7 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
       for (const sample of sampleEvents(e)) {
         const { x, y } = getPagePoint(sample);
         const pressure = sample.pressure ?? 0.5;
-        const isPen = sample.pointerType === 'pen' || sample.pointerType === 'touch';
+        const isPen = sample.pointerType === 'pen' || hasRealPressure(sample.pressure);
         editor.input.pointerMove(x, y, pressure, isPen);
       }
 
@@ -581,6 +700,13 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
     };
 
     const handlePointerUp = (e: PointerEvent) => {
+      activePointerIdsRef.current.delete(e.pointerId);
+      const hadTouchCameraGesture = touchInteractions.handlePointerUpOrCancel(e);
+      if (hadTouchCameraGesture || touchInteractions.isCameraGestureActive()) {
+        e.preventDefault();
+        return;
+      }
+      if (!isPointerActiveRef.current) return;
       isPointerActiveRef.current = false;
       lastPointerClientRef.current = null;
       updatePointerPreview(e.clientX, e.clientY);
@@ -674,7 +800,10 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
       editor.endHistoryEntry();
     };
 
-    const handlePointerCancel = () => {
+    const handlePointerCancel = (e: PointerEvent) => {
+      activePointerIdsRef.current.delete(e.pointerId);
+      const hadTouchCameraGesture = touchInteractions.handlePointerUpOrCancel(e);
+      if (hadTouchCameraGesture || touchInteractions.isCameraGestureActive()) return;
       if (!isPointerActiveRef.current) return;
       isPointerActiveRef.current = false;
       lastPointerClientRef.current = null;
@@ -706,35 +835,61 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
       }
     };
 
-    // undo/redo keybinds
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const isMetaPressed = e.metaKey || e.ctrlKey;
-      const loweredKey = e.key.toLowerCase();
-      const isUndoOrRedoKey = loweredKey === 'z' || loweredKey === 'y';
-
-      if (isMetaPressed && isUndoOrRedoKey) {
-        const shouldRedo = loweredKey === 'y' || (loweredKey === 'z' && e.shiftKey);
-        const changed = shouldRedo ? editor.redo() : editor.undo();
-        if (changed) {
-          e.preventDefault();
-          e.stopPropagation();
-          reconcileSelectionAfterDocumentLoad();
-          setSelectionRotationDeg(0);
-          render();
-          syncHistoryState();
-          return;
-        }
+    const handleWheel = (e: WheelEvent) => {
+      if (!container.contains(e.target as Node)) return;
+      e.preventDefault();
+      if (touchInteractions.isTrackpadZoomActive()) return;
+      const delta = normalizeWheelDelta(e);
+      if (delta.z !== 0) {
+        const rect = canvas.getBoundingClientRect();
+        const pointX = e.clientX - rect.left;
+        const pointY = e.clientY - rect.top;
+        editor.zoomAt(Math.exp(delta.z), pointX, pointY);
+      } else {
+        editor.panBy(delta.x, delta.y);
       }
-
-      editor.input.setModifiers(e.shiftKey, e.ctrlKey, e.metaKey);
-      editor.tools.keyDown({ key: e.key });
       render();
+      refreshSelectionBounds(editor);
+    };
+
+    const handleGestureEvent = (e: Event) => {
+      touchInteractions.handleGestureEvent(e, container);
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      handleKeyboardShortcutKeyDown(e, {
+        isToolAvailable: (tool) => editor.tools.hasTool(tool),
+        setToolFromShortcut: (tool) => {
+          editor.setCurrentTool(tool);
+          setCurrentToolState(tool);
+          currentToolRef.current = tool;
+          if (tool !== 'select') resetSelectUi();
+          render();
+        },
+        runHistoryShortcut: (shouldRedo) => applyDocumentChangeResult(shouldRedo ? editor.redo() : editor.undo()),
+        deleteSelection: () => (currentToolRef.current === 'select' ? deleteCurrentSelection() : false),
+        dispatchKeyDown: (event) => {
+          editor.input.setModifiers(event.shiftKey, event.ctrlKey, event.metaKey);
+          editor.tools.keyDown({ key: event.key });
+          render();
+        },
+        dispatchKeyUp: () => undefined,
+      });
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      editor.input.setModifiers(e.shiftKey, e.ctrlKey, e.metaKey);
-      editor.tools.keyUp({ key: e.key });
-      render();
+      handleKeyboardShortcutKeyUp(e, {
+        isToolAvailable: () => false,
+        setToolFromShortcut: () => undefined,
+        runHistoryShortcut: () => false,
+        deleteSelection: () => false,
+        dispatchKeyDown: () => undefined,
+        dispatchKeyUp: (event) => {
+          editor.input.setModifiers(event.shiftKey, event.ctrlKey, event.metaKey);
+          editor.tools.keyUp({ key: event.key });
+          render();
+        },
+      });
     };
 
     const initializePersistence = async () => {
@@ -811,6 +966,10 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
     const ro = new ResizeObserver(resize);
     ro.observe(container);
     canvas.addEventListener('pointerdown', handlePointerDown);
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    document.addEventListener('gesturestart', handleGestureEvent);
+    document.addEventListener('gesturechange', handleGestureEvent);
+    document.addEventListener('gestureend', handleGestureEvent);
     window.addEventListener('pointermove', handlePointerMove);
     window.addEventListener('pointerup', handlePointerUp);
     window.addEventListener('pointercancel', handlePointerCancel);
@@ -870,13 +1029,19 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
       disposeMount?.();
       ro.disconnect();
       canvas.removeEventListener('pointerdown', handlePointerDown);
+      container.removeEventListener('wheel', handleWheel);
+      document.removeEventListener('gesturestart', handleGestureEvent);
+      document.removeEventListener('gesturechange', handleGestureEvent);
+      document.removeEventListener('gestureend', handleGestureEvent);
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
       window.removeEventListener('pointercancel', handlePointerCancel);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
       isPointerActiveRef.current = false;
+      activePointerIdsRef.current.clear();
       pendingRemoteDocumentRef.current = null;
+      touchInteractions.reset();
       persistenceChannel?.close();
       void persistenceDb?.close();
       editorRef.current = null;
@@ -887,6 +1052,7 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
     options.persistenceKey,
     options.toolDefinitions,
     refreshSelectionBounds,
+    resetSelectUi,
     render,
     updatePointerPreview,
   ]);

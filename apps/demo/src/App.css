@@ -6,8 +6,8 @@
     background: var(--tsdraw-color-panel);
     color: var(--tsdraw-color-text);
     border-radius: var(--tsdraw-radius);
-    border: 1px solid var(--tsdraw-color-border);
-    box-shadow: 0 1px 0 var(--tsdraw-color-panel-highlight) inset, 0 6px 18px var(--tsdraw-color-panel-shadow);
+    border: none;
+    box-shadow: var(--tsdraw-shadow);
 
     &:active {
         background: var(--tsdraw-color-selected);

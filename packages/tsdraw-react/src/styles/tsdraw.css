@@ -10,10 +10,13 @@
   --tsdraw-color-text: #1f1f1f;
   --tsdraw-color-active-surface: #e7e7e7;
   --tsdraw-color-preview: #1d1d1d;
-  --tsdraw-color-panel-highlight: rgba(255, 255, 255, 0.85);
-  --tsdraw-color-panel-shadow: rgba(0, 0, 0, 0.14);
-  --tsdraw-color-panel-shadow-strong: rgba(0, 0, 0, 0.12);
   --tsdraw-color-selection-contrast: rgba(255, 255, 255, 0.9);
+  --tsdraw-color-panel-contrast: hsl(0, 0%, 100%);
+  --tsdraw-shadow:
+    0px 0px 2px hsl(0, 0%, 0%, 15%),
+    0px 2px 3px hsl(0, 0%, 0%, 25%),
+    0px 2px 6px hsl(0, 0%, 0%, 0.1),
+    inset 0px 0px 0px 1px var(--tsdraw-color-panel-contrast);
   --tsdraw-color-handle-fill: #ffffff;
   --tsdraw-color-tool-dot-outline: rgba(255, 255, 255, 0.4);
   --tsdraw-color-tool-ring-border: rgba(24, 24, 24, 0.85);
@@ -34,10 +37,12 @@
   --tsdraw-color-text: #ececec;
   --tsdraw-color-active-surface: #2b2b2b;
   --tsdraw-color-preview: #ececec;
-  --tsdraw-color-panel-highlight: rgba(255, 255, 255, 0.06);
-  --tsdraw-color-panel-shadow: rgba(0, 0, 0, 0.35);
-  --tsdraw-color-panel-shadow-strong: rgba(0, 0, 0, 0.28);
   --tsdraw-color-selection-contrast: rgba(255, 255, 255, 0.15);
+  --tsdraw-color-panel-contrast: hsl(245, 12%, 23%);
+  --tsdraw-shadow:
+    0px 1px 3px hsl(0, 0%, 0%, 66%),
+    0px 2px 6px hsl(0, 0%, 0%, 33%),
+    inset 0px 0px 0px 1px var(--tsdraw-color-panel-contrast);
   --tsdraw-color-handle-fill: #171717;
   --tsdraw-color-tool-dot-outline: rgba(255, 255, 255, 0.2);
   --tsdraw-color-tool-ring-border: rgba(255, 255, 255, 0.75);
@@ -52,8 +57,7 @@
   padding: 4.5px;
   background: var(--tsdraw-color-panel);
   border-radius: var(--tsdraw-radius);
-  border: 1px solid var(--tsdraw-color-border);
-  box-shadow: 0 1px 0 var(--tsdraw-color-panel-highlight) inset, 0 6px 18px var(--tsdraw-color-panel-shadow);
+  box-shadow: var(--tsdraw-shadow);
   z-index: 100;
   pointer-events: all;
 }
@@ -115,9 +119,8 @@
 .tsdraw-style-panel {
   position: absolute;
   background: var(--tsdraw-color-panel);
-  border: 1px solid var(--tsdraw-color-border);
   border-radius: var(--tsdraw-radius);
-  box-shadow: 0 8px 24px var(--tsdraw-color-panel-shadow-strong);
+  box-shadow: var(--tsdraw-shadow);
   color: var(--tsdraw-color-text);
   overflow: hidden;
   pointer-events: all;

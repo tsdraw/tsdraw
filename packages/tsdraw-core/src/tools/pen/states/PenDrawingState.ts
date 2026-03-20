@@ -141,8 +141,8 @@ export class PenDrawingState extends StateNode {
     const penActive = inputs.getIsPen();
     const z = this._startInfo?.point?.z ?? 0.5;
     this._isPenDevice = penActive;
-    this._hasPressure = (penActive && z !== 0) || (z > 0 && z < 0.5) || (z > 0.5 && z < 1);
-    const pressure = this._hasPressure ? toFixed(z * 1.25) : 0.5;
+    this._hasPressure = penActive || z !== 0.5;
+    const pressure = this._hasPressure ? toFixed(z) : 0.5;
     this._phase = inputs.getShiftKey() ? 'straight' : 'free';
     this._extending = false;
     this._lastSample = { ...origin };
@@ -238,9 +238,18 @@ export class PenDrawingState extends StateNode {
     const { id, props: { size, scale } } = target;
     const { segments } = shape.props;
     const curPt = inputs.getCurrentPagePoint();
+
+    if (!this._hasPressure) {
+      const liveZ = curPt.z ?? 0.5;
+      if (liveZ !== 0.5 || inputs.getIsPen()) {
+        this._hasPressure = true;
+        this.editor.updateShapes([{ id, type: 'draw', props: { isPen: true } }]);
+      }
+    }
+
     const local = this.editor.getPointInShapeSpace(shape, curPt);
     const pressure = this._hasPressure
-      ? toFixed((curPt.z ?? 0.5) * 1.25)
+      ? toFixed(curPt.z ?? 0.5)
       : 0.5;
     const pt: Vec3 = { x: toFixed(local.x), y: toFixed(local.y), z: pressure };
 
@@ -393,7 +402,7 @@ export class PenDrawingState extends StateNode {
           const firstPt: Vec3 = {
             x: 0,
             y: 0,
-            z: this._hasPressure ? toFixed((curPage.z ?? 0.5) * 1.25) : 0.5,
+            z: this._hasPressure ? toFixed(curPage.z ?? 0.5) : 0.5,
           };
           this._activePts = [firstPt];
           this.editor.createShape({
