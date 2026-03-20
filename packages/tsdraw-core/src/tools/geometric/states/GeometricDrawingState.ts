@@ -16,7 +16,6 @@ interface GeometricDrawingStateConfig {
     cursorX: number,
     cursorY: number
   ) => ShapeBounds;
-  buildDefaultBounds: (centerX: number, centerY: number) => ShapeBounds;
   buildSegments: (width: number, height: number) => DrawSegment[];
 }
 
@@ -102,6 +101,7 @@ export abstract class GeometricDrawingState extends StateNode {
 
   // If user dragged, use the drag extents for the final shape
   // If they just clicked without dragging, use default-sized shape
+  // If they dragged just a bit (most likely a click), remove the shape and go back to idle
   private completeShape(): void {
     const activeShape = this.getActiveShape();
     const config = this.getConfig();
@@ -112,11 +112,18 @@ export abstract class GeometricDrawingState extends StateNode {
 
     const originPoint = this.editor.input.getOriginPagePoint();
     const cursorPoint = this.editor.input.getCurrentPagePoint();
-    const finalizedBounds = this.editor.input.getIsDragging()
-      ? (this.editor.input.getShiftKey()
-        ? config.buildConstrainedBounds(originPoint.x, originPoint.y, cursorPoint.x, cursorPoint.y)
-        : config.buildUnconstrainedBounds(originPoint.x, originPoint.y, cursorPoint.x, cursorPoint.y))
-      : config.buildDefaultBounds(originPoint.x, originPoint.y);
+    const dx = cursorPoint.x - originPoint.x;
+    const dy = cursorPoint.y - originPoint.y;
+    const draggedFarEnough = (dx * dx + dy * dy) > this.editor.options.dragDistanceSquared;
+
+    if (!draggedFarEnough) {
+      this.removeCurrentShape();
+      this.ctx.transition(config.idleStateId, this.startedAt);
+      return;
+    }
+    const finalizedBounds = this.editor.input.getShiftKey()
+      ? config.buildConstrainedBounds(originPoint.x, originPoint.y, cursorPoint.x, cursorPoint.y)
+      : config.buildUnconstrainedBounds(originPoint.x, originPoint.y, cursorPoint.x, cursorPoint.y);
 
     this.editor.store.updateShape(activeShape.id, {
       x: finalizedBounds.x,

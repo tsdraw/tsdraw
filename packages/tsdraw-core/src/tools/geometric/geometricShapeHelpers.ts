@@ -14,10 +14,6 @@ export interface ShapeBounds {
 }
 
 const MIN_SIDE_LENGTH = 1;
-const DEFAULT_RECTANGLE_WIDTH = 180;
-const DEFAULT_RECTANGLE_HEIGHT = 120;
-const DEFAULT_ELLIPSE_WIDTH = 180;
-const DEFAULT_ELLIPSE_HEIGHT = 120;
 
 // Turn anchor + cursor into a bounding box, optionally forcing both axes to the longer side to get a square or circle
 function toSizedBounds(
@@ -71,20 +67,6 @@ export function buildRectangleBounds(
   return toSizedBounds(anchorX, anchorY, cursorX, cursorY, false);
 }
 
-export function buildDefaultCenteredRectangleBounds(
-  centerX: number,
-  centerY: number
-): ShapeBounds {
-  const halfWidth = DEFAULT_RECTANGLE_WIDTH / 2;
-  const halfHeight = DEFAULT_RECTANGLE_HEIGHT / 2;
-  return {
-    x: centerX - halfWidth,
-    y: centerY - halfHeight,
-    width: DEFAULT_RECTANGLE_WIDTH,
-    height: DEFAULT_RECTANGLE_HEIGHT,
-  };
-}
-
 // Four straight segments connecting the corners. encoded as draw segments so
 // the renderer handles them exactly like hand-drawn strokes.
 export function buildRectangleSegments(width: number, height: number): DrawSegment[] {
@@ -116,20 +98,6 @@ export function buildEllipseBounds(
   cursorY: number
 ): ShapeBounds {
   return toSizedBounds(anchorX, anchorY, cursorX, cursorY, false);
-}
-
-export function buildDefaultCenteredEllipseBounds(
-  centerX: number,
-  centerY: number
-): ShapeBounds {
-  const halfWidth = DEFAULT_ELLIPSE_WIDTH / 2;
-  const halfHeight = DEFAULT_ELLIPSE_HEIGHT / 2;
-  return {
-    x: centerX - halfWidth,
-    y: centerY - halfHeight,
-    width: DEFAULT_ELLIPSE_WIDTH,
-    height: DEFAULT_ELLIPSE_HEIGHT,
-  };
 }
 
 // Approximate the ellipse as a 64-sample polyline encoded as a single "free" segment.
