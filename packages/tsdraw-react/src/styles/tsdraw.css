@@ -25,6 +25,9 @@
   font-family: system-ui, sans-serif;
   background: var(--tsdraw-color-bg);
   overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
 }
 
 .tsdraw.tsdraw-darkmode {
@@ -290,6 +293,7 @@
   position: absolute;
   transform-origin: center center;
   pointer-events: none;
+  overflow: visible;
   z-index: 91;
 }
 
@@ -304,16 +308,32 @@
 
 .tsdraw-selection-handle {
   position: absolute;
-  width: 10px;
-  height: 10px;
-  border: 1px solid #4465e9;
-  background: var(--tsdraw-color-handle-fill);
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
   transform: translate(-50%, -50%);
-  border-radius: 2px;
   padding: 0;
+  margin: 0;
   cursor: nwse-resize;
   z-index: 2;
   pointer-events: auto;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.tsdraw-selection-handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  transform: translate(-50%, -50%);
+  border: 1px solid #4465e9;
+  background: var(--tsdraw-color-handle-fill);
+  border-radius: 2px;
+  pointer-events: none;
 }
 
 .tsdraw-selection-handle--ne,
@@ -337,16 +357,32 @@
   position: absolute;
   left: 50%;
   top: -20px;
-  width: 10px;
-  height: 10px;
-  border: 1px solid #4465e9;
-  background: var(--tsdraw-color-handle-fill);
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
   transform: translate(-50%, -50%);
-  border-radius: 2px;
   padding: 0;
+  margin: 0;
   cursor: grab;
   z-index: 3;
   pointer-events: auto;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.tsdraw-rotation-handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  transform: translate(-50%, -50%);
+  border: 1px solid #4465e9;
+  background: var(--tsdraw-color-handle-fill);
+  border-radius: 50%;
+  pointer-events: none;
 }
 
 .tsdraw-tool-overlay {

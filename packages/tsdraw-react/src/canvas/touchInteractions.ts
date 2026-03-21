@@ -25,7 +25,6 @@ interface TouchCameraState {
   initialCenter: { x: number; y: number };
   previousDistance: number;
   initialDistance: number;
-  previousAngle: number;
 }
 
 export interface TouchInteractionHandlers {
@@ -66,7 +65,6 @@ export function createTouchInteractionController(
     initialCenter: { x: 0, y: 0 },
     previousDistance: 1,
     initialDistance: 1,
-    previousAngle: 0,
   };
 
   const isTouchPointer = (event: PointerEvent) => event.pointerType === 'touch';
@@ -76,7 +74,6 @@ export function createTouchInteractionController(
     touchCameraState.mode = 'not-sure';
     touchCameraState.previousDistance = 1;
     touchCameraState.initialDistance = 1;
-    touchCameraState.previousAngle = 0;
   };
 
   const maybeHandleTouchTapGesture = () => {
@@ -112,7 +109,6 @@ export function createTouchInteractionController(
     const second = points[1]!;
     const center = { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
     const distance = Math.hypot(second.x - first.x, second.y - first.y);
-    const angle = Math.atan2(second.y - first.y, second.x - first.x);
 
     touchCameraState.active = true;
     touchCameraState.mode = 'not-sure';
@@ -120,7 +116,6 @@ export function createTouchInteractionController(
     touchCameraState.initialCenter = center;
     touchCameraState.previousDistance = Math.max(1, distance);
     touchCameraState.initialDistance = Math.max(1, distance);
-    touchCameraState.previousAngle = angle;
   };
 
   const updateTouchCameraGesture = () => {
@@ -135,7 +130,6 @@ export function createTouchInteractionController(
     const second = points[1]!;
     const center = { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
     const distance = Math.max(1, Math.hypot(second.x - first.x, second.y - first.y));
-    const angle = Math.atan2(second.y - first.y, second.x - first.x);
     const centerDx = center.x - touchCameraState.previousCenter.x;
     const centerDy = center.y - touchCameraState.previousCenter.y;
     const touchDistance = Math.abs(distance - touchCameraState.initialDistance);
@@ -153,12 +147,10 @@ export function createTouchInteractionController(
     if (touchCameraState.mode === 'zooming') {
       const zoomFactor = distance / touchCameraState.previousDistance;
       editor.zoomAt(zoomFactor, centerOnCanvasX, centerOnCanvasY);
-      editor.rotateAt(angle - touchCameraState.previousAngle, centerOnCanvasX, centerOnCanvasY);
     }
 
     touchCameraState.previousCenter = center;
     touchCameraState.previousDistance = distance;
-    touchCameraState.previousAngle = angle;
     handlers.refreshView();
     return true;
   };

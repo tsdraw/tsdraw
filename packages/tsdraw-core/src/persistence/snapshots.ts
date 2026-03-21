@@ -26,7 +26,6 @@ export interface TsdrawSessionStateSnapshot {
     x: number;
     y: number;
     zoom: number;
-    rotation?: number;
   };
   currentToolId: string;
   drawStyle: {

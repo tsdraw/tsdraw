@@ -21,7 +21,6 @@ export class CanvasRenderer implements ICanvasRenderer {
   render(ctx: CanvasRenderingContext2D, viewport: Viewport, shapes: Shape[]): void {
     ctx.save();
     ctx.translate(viewport.x, viewport.y);
-    ctx.rotate(viewport.rotation);
     ctx.scale(viewport.zoom, viewport.zoom);
     for (const shape of shapes) {
       if (shape.type === 'draw') {

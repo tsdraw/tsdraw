@@ -117,6 +117,15 @@ function resolveDrawColor(colorStyle: ColorStyle, theme: 'light' | 'dark'): stri
   return resolveThemeColor(colorStyle, theme);
 }
 
+function getHandlePagePoint(bounds: SelectionBounds, handle: ResizeHandle): { x: number; y: number } {
+  switch (handle) {
+    case 'nw': return { x: bounds.minX, y: bounds.minY };
+    case 'ne': return { x: bounds.maxX, y: bounds.minY };
+    case 'sw': return { x: bounds.minX, y: bounds.maxY };
+    case 'se': return { x: bounds.maxX, y: bounds.maxY };
+  }
+}
+
 const ZOOM_WHEEL_CAP = 10;
 
 export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOptions = {}): TsdrawCanvasController {
@@ -140,10 +149,12 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
     handle: ResizeHandle | null;
     startBounds: ReturnType<typeof getSelectionBoundsPage>;
     startShapes: ReturnType<typeof buildTransformSnapshots>;
+    cursorHandleOffset: { x: number; y: number };
   }>({
     handle: null,
     startBounds: null,
     startShapes: new Map(),
+    cursorHandleOffset: { x: 0, y: 0 },
   });
   const rotateRef = useRef<{
     center: { x: number; y: number } | null;
@@ -259,13 +270,8 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
     setIsResizingSelection(false);
     setIsRotatingSelection(false);
     selectDragRef.current.mode = 'none';
-    resizeRef.current = { handle: null, startBounds: null, startShapes: new Map() };
-    rotateRef.current = {
-      center: null,
-      startAngle: 0,
-      startSelectionRotationDeg: selectionRotationRef.current,
-      startShapes: new Map(),
-    };
+    resizeRef.current = { handle: null, startBounds: null, startShapes: new Map(), cursorHandleOffset: { x: 0, y: 0 } };
+    rotateRef.current = { center: null, startAngle: 0, startSelectionRotationDeg: 0, startShapes: new Map() };
   }, []);
 
   const handleResizePointerDown = useCallback(
@@ -273,21 +279,32 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
       e.preventDefault();
       e.stopPropagation();
       const editor = editorRef.current;
-      if (!editor || selectedShapeIdsRef.current.length === 0) return;
+      const canvas = canvasRef.current;
+      if (!editor || !canvas || selectedShapeIdsRef.current.length === 0) return;
       const bounds = getSelectionBoundsPage(editor, selectedShapeIdsRef.current);
       if (!bounds) return;
+
+      const handlePagePoint = getHandlePagePoint(bounds, handle);
+      const pointerPage = getPagePointFromClient(editor, e.clientX, e.clientY);
+      const cursorOffset = {
+        x: pointerPage.x - handlePagePoint.x,
+        y: pointerPage.y - handlePagePoint.y,
+      };
 
       resizeRef.current = {
         handle,
         startBounds: bounds,
         startShapes: buildTransformSnapshots(editor, selectedShapeIdsRef.current),
+        cursorHandleOffset: cursorOffset,
       };
+      isPointerActiveRef.current = true;
+      activePointerIdsRef.current.add(e.pointerId);
+      canvas.setPointerCapture(e.pointerId);
       editor.beginHistoryEntry();
       selectDragRef.current.mode = 'resize';
-      const p = getPagePointFromClient(editor, e.clientX, e.clientY);
-      editor.input.pointerDown(p.x, p.y, 0.5, false);
-      selectDragRef.current.startPage = p;
-      selectDragRef.current.currentPage = p;
+      editor.input.pointerDown(handlePagePoint.x, handlePagePoint.y, 0.5, false);
+      selectDragRef.current.startPage = handlePagePoint;
+      selectDragRef.current.currentPage = handlePagePoint;
       lastPointerClientRef.current = { x: e.clientX, y: e.clientY };
       setIsResizingSelection(true);
     },
@@ -299,7 +316,8 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
       e.preventDefault();
       e.stopPropagation();
       const editor = editorRef.current;
-      if (!editor || selectedShapeIdsRef.current.length === 0) return;
+      const canvas = canvasRef.current;
+      if (!editor || !canvas || selectedShapeIdsRef.current.length === 0) return;
       const bounds = getSelectionBoundsPage(editor, selectedShapeIdsRef.current);
       if (!bounds) return;
 
@@ -314,6 +332,9 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
         startSelectionRotationDeg: selectionRotationRef.current,
         startShapes: buildTransformSnapshots(editor, selectedShapeIdsRef.current),
       };
+      isPointerActiveRef.current = true;
+      activePointerIdsRef.current.add(e.pointerId);
+      canvas.setPointerCapture(e.pointerId);
       editor.beginHistoryEntry();
       selectDragRef.current.mode = 'rotate';
       editor.input.pointerDown(p.x, p.y, 0.5, false);
@@ -457,7 +478,6 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
       setDrawDash(nextDrawStyle.dash);
       setDrawFill(nextDrawStyle.fill);
       setDrawSize(nextDrawStyle.size);
-      setSelectionRotationDeg(0);
       render();
       refreshSelectionBounds(editor, nextSelectionIds);
       ignorePersistenceChanges = false;
@@ -476,7 +496,6 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
     const applyDocumentChangeResult = (changed: boolean) => {
       if (!changed) return false;
       reconcileSelectionAfterDocumentLoad();
-      setSelectionRotationDeg(0);
       render();
       syncHistoryState();
       return true;
@@ -505,8 +524,7 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
       setSelectedShapeIds([]);
       selectedShapeIdsRef.current = [];
       setSelectionBounds(null);
-      setSelectionBrush(null);
-      setSelectionRotationDeg(0);
+      resetSelectUi();
       render();
       syncHistoryState();
       return true;
@@ -518,12 +536,7 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
       lastPointerClientRef.current = null;
       editor.input.pointerUp();
       if (currentToolRef.current === 'select') {
-        const dragMode = selectDragRef.current.mode;
-        if (dragMode === 'rotate') setIsRotatingSelection(false);
-        if (dragMode === 'resize') setIsResizingSelection(false);
-        if (dragMode === 'move') setIsMovingSelection(false);
-        if (dragMode === 'marquee') setSelectionBrush(null);
-        selectDragRef.current.mode = 'none';
+        resetSelectUi();
       } else {
         editor.tools.pointerUp();
       }
@@ -583,7 +596,14 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
         const hit = getTopShapeAtPoint(editor, { x, y });
         const isHitSelected = !!(hit && selectedShapeIdsRef.current.includes(hit.id));
 
-        if (isHitSelected) {
+        const isInsideSelectionBounds = (() => {
+          if (selectedShapeIdsRef.current.length === 0) return false;
+          const pageBounds = getSelectionBoundsPage(editor, selectedShapeIdsRef.current);
+          if (!pageBounds) return false;
+          return x >= pageBounds.minX && x <= pageBounds.maxX && y >= pageBounds.minY && y <= pageBounds.maxY;
+        })();
+
+        if (isHitSelected || isInsideSelectionBounds) {
           selectDragRef.current = {
             mode: 'move',
             startPage: { x, y },
@@ -662,9 +682,9 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
 
         // Resize and move both work using captured snapshots so the transform stays stable throughout the drag instead of adding up shape updates on each pointer move
         if (mode === 'resize') {
-          const { handle, startBounds, startShapes } = resizeRef.current;
+          const { handle, startBounds, startShapes, cursorHandleOffset } = resizeRef.current;
           if (!handle || !startBounds) return;
-          applyResize(editor, handle, startBounds, startShapes, { x: px, y: py }, e.shiftKey);
+          applyResize(editor, handle, startBounds, startShapes, { x: px - cursorHandleOffset.x, y: py - cursorHandleOffset.y }, e.shiftKey);
           render();
           refreshSelectionBounds(editor);
           return;
@@ -687,7 +707,6 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
           const nextIds = selectDragRef.current.additive ? Array.from(new Set([...selectDragRef.current.initialSelection, ...ids])) : ids;
           setSelectedShapeIds(nextIds);
           selectedShapeIdsRef.current = nextIds;
-          setSelectionRotationDeg(0);
           refreshSelectionBounds(editor, nextIds);
           return;
         }
@@ -722,12 +741,7 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
           setIsRotatingSelection(false);
           selectDragRef.current.mode = 'none';
           setSelectionRotationDeg(0);
-          rotateRef.current = {
-            center: null,
-            startAngle: 0,
-            startSelectionRotationDeg: selectionRotationRef.current,
-            startShapes: new Map(),
-          };
+          rotateRef.current = { center: null, startAngle: 0, startSelectionRotationDeg: 0, startShapes: new Map() };
           render();
           refreshSelectionBounds(editor);
           editor.endHistoryEntry();
@@ -737,7 +751,7 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
         if (drag.mode === 'resize') {
           setIsResizingSelection(false);
           selectDragRef.current.mode = 'none';
-          resizeRef.current = { handle: null, startBounds: null, startShapes: new Map() };
+          resizeRef.current = { handle: null, startBounds: null, startShapes: new Map(), cursorHandleOffset: { x: 0, y: 0 } };
           render();
           refreshSelectionBounds(editor);
           editor.endHistoryEntry();
@@ -774,7 +788,6 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
 
           setSelectedShapeIds(ids);
           selectedShapeIdsRef.current = ids;
-          setSelectionRotationDeg(0);
           setSelectionBrush(null);
           selectDragRef.current.mode = 'none';
           render();
@@ -965,11 +978,18 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
     resize();
     const ro = new ResizeObserver(resize);
     ro.observe(container);
+    const handlePointerLeaveViewport = (e: PointerEvent) => {
+      if (e.relatedTarget === null) {
+        setIsPointerInsideCanvas(false);
+      }
+    };
+
     canvas.addEventListener('pointerdown', handlePointerDown);
     container.addEventListener('wheel', handleWheel, { passive: false });
     document.addEventListener('gesturestart', handleGestureEvent);
     document.addEventListener('gesturechange', handleGestureEvent);
     document.addEventListener('gestureend', handleGestureEvent);
+    document.documentElement.addEventListener('pointerleave', handlePointerLeaveViewport);
     window.addEventListener('pointermove', handlePointerMove);
     window.addEventListener('pointerup', handlePointerUp);
     window.addEventListener('pointercancel', handlePointerCancel);
@@ -995,7 +1015,6 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
         const changed = editor.undo();
         if (!changed) return false;
         reconcileSelectionAfterDocumentLoad();
-        setSelectionRotationDeg(0);
         render();
         syncHistoryState();
         return true;
@@ -1004,7 +1023,6 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
         const changed = editor.redo();
         if (!changed) return false;
         reconcileSelectionAfterDocumentLoad();
-        setSelectionRotationDeg(0);
         render();
         syncHistoryState();
         return true;
@@ -1033,6 +1051,7 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
       document.removeEventListener('gesturestart', handleGestureEvent);
       document.removeEventListener('gesturechange', handleGestureEvent);
       document.removeEventListener('gestureend', handleGestureEvent);
+      document.documentElement.removeEventListener('pointerleave', handlePointerLeaveViewport);
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
       window.removeEventListener('pointercancel', handlePointerCancel);
@@ -1101,7 +1120,6 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
       selectedShapeIdsRef.current = nextSelectedShapeIds;
       setSelectedShapeIds(nextSelectedShapeIds);
     }
-    setSelectionRotationDeg(0);
     render();
     setCanUndo(editor.canUndo());
     setCanRedo(editor.canRedo());
@@ -1118,18 +1136,27 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
       selectedShapeIdsRef.current = nextSelectedShapeIds;
       setSelectedShapeIds(nextSelectedShapeIds);
     }
-    setSelectionRotationDeg(0);
     render();
     setCanUndo(editor.canUndo());
     setCanRedo(editor.canRedo());
     return true;
   }, [render]);
 
+  const isHoveringSelectionBounds = isPointerInsideCanvas
+    && currentTool === 'select'
+    && selectedShapeIds.length > 0
+    && selectionBounds != null
+    && pointerScreenPoint.x >= selectionBounds.left
+    && pointerScreenPoint.x <= selectionBounds.left + selectionBounds.width
+    && pointerScreenPoint.y >= selectionBounds.top
+    && pointerScreenPoint.y <= selectionBounds.top + selectionBounds.height;
+
   const showToolOverlay = isPointerInsideCanvas && (currentTool === 'pen' || currentTool === 'eraser');
   const canvasCursor = getCanvasCursor(currentTool, {
     isMovingSelection,
     isResizingSelection,
     isRotatingSelection,
+    isHoveringSelectionBounds,
     showToolOverlay,
   });
   const cursorContext: TsdrawCursorContext = {
