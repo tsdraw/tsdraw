@@ -1,6 +1,7 @@
 import { DEFAULT_COLORS, resolveThemeColor } from '@tsdraw/core';
 import type { ColorStyle, DashStyle, FillStyle, SizeStyle } from '@tsdraw/core';
 import type { CSSProperties, ReactNode } from 'react';
+import { BaseComponent } from './BaseComponent.js';
 
 const STYLE_COLORS = Object.entries(DEFAULT_COLORS)
   .filter(([key]) => key !== 'white')
@@ -66,7 +67,7 @@ export function StylePanel({
   const customPartMap = new Map((customParts ?? []).map((customPart) => [customPart.id, customPart]));
 
   return (
-    <div className="tsdraw-style-panel" style={style} aria-label="Draw style panel">
+    <BaseComponent className="tsdraw-style-panel" style={style} aria-label="Draw style panel">
       {parts.map((part) => {
         if (part === 'colors') {
           return (
@@ -165,6 +166,6 @@ export function StylePanel({
           </div>
         );
       })}
-    </div>
+    </BaseComponent>
   );
 }

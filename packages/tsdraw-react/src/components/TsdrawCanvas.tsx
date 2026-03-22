@@ -3,9 +3,18 @@ import type { CSSProperties, ReactNode } from 'react';
 import type { ColorStyle, DashStyle, DefaultToolId, FillStyle, SizeStyle, ToolDefinition, ToolId, Viewport, TsdrawDocumentSnapshot, TsdrawEditorSnapshot, TsdrawBackgroundOptions } from '@tsdraw/core';
 import type { TsdrawCameraOptions, TsdrawTouchOptions, TsdrawKeyboardShortcutOptions, TsdrawPenOptions } from '../canvas/canvasOptions.js';
 import { SelectionOverlay } from './SelectionOverlay.js';
-import { StylePanel, type TsdrawStylePanelCustomPart, type TsdrawStylePanelPartItem } from './StylePanel.js';
+import { StylePanel, type TsdrawStylePanelCustomPart, type TsdrawStylePanelPartItem } from './ui/StylePanel.js';
 import { ToolOverlay } from './ToolOverlay.js';
-import { Toolbar, getDefaultToolbarIcon, type ToolbarPart } from './Toolbar.js';
+import { Toolbar, getDefaultToolbarIcon, type ToolbarPart } from './ui/Toolbar.js';
+import {
+  resolvePlacementStyle,
+  resolveOrientation,
+  calculateSnap,
+  type ComponentDragEndPayload,
+  type DraggedPosition,
+  type UiAnchor,
+  type TsdrawUiPlacement,
+} from './ui/BaseComponent.js';
 import {
   useTsdrawCanvasController,
   type TsdrawCursorContext,
@@ -33,20 +42,7 @@ const DEFAULT_TOOL_LABELS: Record<DefaultToolId, string> = {
   hand: 'Hand',
 };
 
-type VerticalPart = 'top' | 'bottom' | 'center';
-type HorizontalPart = 'left' | 'right' | 'center';
-export type UiAnchor = | `${VerticalPart}-${HorizontalPart}` | `${HorizontalPart}-${VerticalPart}`;
-
-function parseAnchor(anchor: UiAnchor): { vertical: VerticalPart; horizontal: HorizontalPart } {
-  const parts = anchor.split('-') as string[];
-  let vertical: VerticalPart = 'center';
-  let horizontal: HorizontalPart = 'center';
-  for (const part of parts) {
-    if (part === 'top' || part === 'bottom') vertical = part;
-    else if (part === 'left' || part === 'right') horizontal = part;
-  }
-  return { vertical, horizontal };
-}
+export type { UiAnchor, TsdrawUiPlacement } from './ui/BaseComponent.js';
 
 export interface TsdrawCustomTool {
   id: ToolId;
@@ -63,18 +59,14 @@ export interface TsdrawCustomTool {
 export type TsdrawToolbarBuiltInAction = 'undo' | 'redo';
 export type ToolbarPartItem = ToolId | TsdrawToolbarBuiltInAction;
 
-export interface TsdrawUiPlacement {
-  anchor?: UiAnchor;
-  offsetX?: number;
-  offsetY?: number;
-  style?: CSSProperties;
-}
-
 export interface TsdrawUiOptions {
   toolbar?: {
     hide?: boolean;
     placement?: TsdrawUiPlacement;
     parts?: ToolbarPartItem[][];
+    draggable?: boolean;
+    saveDraggedPosition?: boolean;
+    disabledDragPositions?: UiAnchor[];
   };
   stylePanel?: {
     hide?: boolean;
@@ -135,44 +127,6 @@ function isToolbarAction(item: ToolbarPartItem): item is TsdrawToolbarBuiltInAct
   return item === 'undo' || item === 'redo';
 }
 
-function resolvePlacementStyle(
-  placement: TsdrawUiPlacement | undefined,
-  fallbackAnchor: UiAnchor,
-  fallbackOffsetX: number,
-  fallbackOffsetY: number
-): CSSProperties {
-  const anchor = placement?.anchor ?? fallbackAnchor;
-  const offsetX = placement?.offsetX ?? fallbackOffsetX;
-  const offsetY = placement?.offsetY ?? fallbackOffsetY;
-  const { vertical, horizontal } = parseAnchor(anchor);
-  const result: CSSProperties = {};
-  const transforms: string[] = [];
-
-  if (horizontal === 'left') {
-    result.left = offsetX;
-  } else if (horizontal === 'right') {
-    result.right = offsetX;
-  } else {
-    result.left = '50%';
-    transforms.push('translateX(-50%)');
-    if (offsetX) transforms.push(`translateX(${offsetX}px)`);
-  }
-
-  if (vertical === 'top') {
-    result.top = offsetY;
-  } else if (vertical === 'bottom') {
-    result.bottom = offsetY;
-  } else {
-    result.top = '50%';
-    transforms.push('translateY(-50%)');
-    if (offsetY) transforms.push(`translateY(${offsetY}px)`);
-  }
-
-  if (transforms.length > 0) result.transform = transforms.join(' ');
-
-  return placement?.style ? { ...result, ...placement.style } : result;
-}
-
 export function Tsdraw(props: TsdrawProps) {
   const [systemTheme, setSystemTheme] = useState<'light' | 'dark'>(() => {
     if (typeof window === 'undefined') return 'light';
@@ -180,6 +134,20 @@ export function Tsdraw(props: TsdrawProps) {
   });
   const customTools = props.customTools ?? EMPTY_CUSTOM_TOOLS;
   const toolbarPartIds = props.uiOptions?.toolbar?.parts ?? DEFAULT_TOOLBAR_PARTS;
+  const toolbarPlacement = props.uiOptions?.toolbar?.placement;
+  const toolbarEdgeOffset = toolbarPlacement?.edgeOffset ?? 14;
+  const isToolbarDraggable = props.uiOptions?.toolbar?.draggable === true;
+  const shouldSaveDraggedToolbarPosition = props.uiOptions?.toolbar?.saveDraggedPosition === true;
+  const disabledDragPositionsArray = props.uiOptions?.toolbar?.disabledDragPositions;
+  const disabledDragPositionsSet = useMemo(
+    () => disabledDragPositionsArray && disabledDragPositionsArray.length > 0 ? new Set(disabledDragPositionsArray) : undefined,
+    [disabledDragPositionsArray]
+  );
+  const toolbarDraggedSessionKey = useMemo(
+    () => `tsdraw-toolbar-pos-${props.persistenceKey ?? 'default'}`,
+    [props.persistenceKey]
+  );
+  const [draggedToolbarPosition, setDraggedToolbarPosition] = useState<DraggedPosition | null>(null);
   const customToolMap = useMemo(
     () => new Map(customTools.map((customTool) => [customTool.id, customTool])),
     [customTools]
@@ -272,9 +240,41 @@ export function Tsdraw(props: TsdrawProps) {
     onToolChange: props.onToolChange,
   });
 
-  const toolbarPlacementStyle = resolvePlacementStyle(props.uiOptions?.toolbar?.placement, 'bottom-center', 0, 14);
-  const stylePanelPlacementStyle = resolvePlacementStyle(props.uiOptions?.stylePanel?.placement, 'top-right', 8, 8);
+  // If toolbar is dragged use the dragged position. Otherwise use the placement anchor
+  // By default, use the bottom center anchor
+  const toolbarPlacementAnchor = draggedToolbarPosition?.anchor ?? toolbarPlacement?.anchor ?? 'bottom-center';
+  const effectiveToolbarPlacement: TsdrawUiPlacement | undefined = draggedToolbarPosition
+    ? { anchor: draggedToolbarPosition.anchor, edgeOffset: toolbarEdgeOffset, style: toolbarPlacement?.style }
+    : toolbarPlacement;
+  const toolbarPlacementStyle = resolvePlacementStyle(effectiveToolbarPlacement, 'bottom-center', 14);
+  const toolbarOrientation = resolveOrientation(toolbarPlacementAnchor);
+  const stylePanelPlacementStyle = resolvePlacementStyle(props.uiOptions?.stylePanel?.placement, 'top-right', 8);
   const isToolbarHidden = props.uiOptions?.toolbar?.hide === true;
+  useEffect(() => {
+    if (!isToolbarDraggable || !shouldSaveDraggedToolbarPosition || typeof window === 'undefined') return;
+    try {
+      const rawPosition = window.sessionStorage.getItem(toolbarDraggedSessionKey);
+      if (!rawPosition) return;
+      const parsedPosition = JSON.parse(rawPosition) as Partial<DraggedPosition>;
+      if (typeof parsedPosition.anchor !== 'string') return;
+      setDraggedToolbarPosition({ anchor: parsedPosition.anchor as UiAnchor });
+    } catch {}
+  }, [isToolbarDraggable, shouldSaveDraggedToolbarPosition, toolbarDraggedSessionKey]);
+
+  useEffect(() => {
+    if (isToolbarDraggable) return;
+    setDraggedToolbarPosition(null);
+  }, [isToolbarDraggable]);
+
+  const handleToolbarDragEnd = useCallback((payload: ComponentDragEndPayload) => {
+    const containerNode = containerRef.current;
+    if (!containerNode) return;
+    const nextPosition = calculateSnap(payload, containerNode.getBoundingClientRect(), disabledDragPositionsSet);
+    setDraggedToolbarPosition(nextPosition);
+    if (!shouldSaveDraggedToolbarPosition || typeof window === 'undefined') return;
+    window.sessionStorage.setItem(toolbarDraggedSessionKey, JSON.stringify(nextPosition));
+  }, [containerRef, disabledDragPositionsSet, shouldSaveDraggedToolbarPosition, toolbarDraggedSessionKey]);
+
   const isStylePanelHidden = props.uiOptions?.stylePanel?.hide === true || props.readOnly === true;
   const canvasCursor = props.uiOptions?.cursor?.getCursor?.(cursorContext) ?? defaultCanvasCursor;
   const defaultToolOverlay = (
@@ -425,7 +425,7 @@ export function Tsdraw(props: TsdrawProps) {
             position: 'absolute',
             zIndex: 130,
             pointerEvents: 'all',
-            ...resolvePlacementStyle(customElement.placement, 'top-left', 8, 8),
+            ...resolvePlacementStyle(customElement.placement, 'top-left', 8),
           }}
         >
           {customElement.render({ currentTool, setTool, applyDrawStyle })}
@@ -435,9 +435,12 @@ export function Tsdraw(props: TsdrawProps) {
         <Toolbar
           parts={toolbarParts}
           style={toolbarPlacementStyle}
+          orientation={toolbarOrientation}
           currentTool={isPersistenceReady ? currentTool : null}
           onToolChange={setTool}
           disabled={!isPersistenceReady}
+          draggable={isToolbarDraggable}
+          onDragEnd={handleToolbarDragEnd}
         />
       ) : null}
     </div>

@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import type { ToolId } from '@tsdraw/core';
 import { IconArrowBackUp, IconArrowForwardUp, IconEraser, IconHandStop, IconPencil, IconPointer, IconSquare, IconCircle } from '@tabler/icons-react';
+import { BaseComponent, type ComponentDragEndPayload } from './BaseComponent.js';
 
 export interface ToolbarToolItem {
   type: 'tool';
@@ -30,6 +31,9 @@ interface ToolbarProps {
   onToolChange: (tool: ToolId) => void;
   disabled?: boolean;
   style?: CSSProperties;
+  orientation?: 'horizontal' | 'vertical';
+  draggable?: boolean;
+  onDragEnd?: (payload: ComponentDragEndPayload) => void;
 }
 
 export function getDefaultToolbarIcon(toolId: ToolId, isActive: boolean): ReactNode {
@@ -47,9 +51,11 @@ function getActionIcon(actionId: 'undo' | 'redo'): ReactNode {
   return <IconArrowForwardUp size={16} stroke={1.8} />;
 }
 
-export function Toolbar({ parts, currentTool, onToolChange, disabled, style }: ToolbarProps) {
+export function Toolbar({ parts, currentTool, onToolChange, disabled, style, orientation='horizontal', draggable=false, onDragEnd }: ToolbarProps) {
+  const orientationClass = orientation === 'vertical' ? ' tsdraw-toolbar--vertical' : '';
+
   return (
-    <div className="tsdraw-toolbar" style={style}>
+    <BaseComponent className={`tsdraw-toolbar${orientationClass}`} style={style} draggable={draggable} onDragEnd={onDragEnd}>
       {parts.map((part, partIndex) => (
         <div key={part.id} className="tsdraw-toolbar-part">
           {part.items.map((item) => {
@@ -88,6 +94,6 @@ export function Toolbar({ parts, currentTool, onToolChange, disabled, style }: T
           {partIndex < parts.length - 1 ? <div className="tsdraw-toolbar-separator" /> : null}
         </div>
       ))}
-    </div>
+    </BaseComponent>
   );
 }

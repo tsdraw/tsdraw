@@ -37,22 +37,22 @@ export function App() {
         persistenceKey={String(activeProblem.id)}
         uiOptions={{
           toolbar: {
-            placement: { anchor: 'top-center', offsetX: 0, offsetY: 18 },
+            placement: { anchor: 'top-center', edgeOffset: 18 },
           },
           customElements: [
             {
               id: `problem-${activeProblem.id}`,
-              placement: { anchor: 'bottom-center', offsetX: 0, offsetY: 30 },
+              placement: { anchor: 'bottom-center', edgeOffset: 30 },
               render: () => activeProblem.question,
             },
             {
               id: `previous-${activeProblem.id}`,
-              placement: { anchor: 'bottom-left', offsetX: 18, offsetY: 18 },
+              placement: { anchor: 'bottom-left', edgeOffset: 18 },
               render: () => <IconArrowLeft className='switch-btn' size={18} onClick={goToPreviousProblem} />
             },
             {
               id: `next-${activeProblem.id}`,
-              placement: { anchor: 'bottom-right', offsetX: 18, offsetY: 18 },
+              placement: { anchor: 'bottom-right', edgeOffset: 18 },
               render: () => <IconArrowRight className='switch-btn' size={18} onClick={goToNextProblem} />
             },
           ],

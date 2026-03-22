@@ -52,23 +52,48 @@
   --tsdraw-color-tool-ring-fill: rgba(255, 255, 255, 0.08);
 }
 
+.tsdraw-component {
+  background: var(--tsdraw-color-panel);
+  border-radius: var(--tsdraw-radius);
+  box-shadow: var(--tsdraw-shadow);
+  pointer-events: all;
+}
+
+.tsdraw-component--draggable {
+  cursor: grab;
+}
+
+.tsdraw-component--dragging {
+  cursor: grabbing;
+}
+
 .tsdraw-toolbar {
   position: absolute;
   display: flex;
   align-items: center;
   gap: 0;
   padding: 4.5px;
-  background: var(--tsdraw-color-panel);
-  border-radius: var(--tsdraw-radius);
-  box-shadow: var(--tsdraw-shadow);
   z-index: 100;
-  pointer-events: all;
 }
 
 .tsdraw-toolbar-part {
   display: flex;
   align-items: center;
   gap: 2px;
+}
+
+.tsdraw-toolbar--vertical {
+  flex-direction: column;
+}
+
+.tsdraw-toolbar--vertical .tsdraw-toolbar-part {
+  flex-direction: column;
+}
+
+.tsdraw-toolbar--vertical .tsdraw-toolbar-separator {
+  width: 24px;
+  height: 1px;
+  margin: 5px 0;
 }
 
 .tsdraw-toolbar-separator {
@@ -121,12 +146,8 @@
 
 .tsdraw-style-panel {
   position: absolute;
-  background: var(--tsdraw-color-panel);
-  border-radius: var(--tsdraw-radius);
-  box-shadow: var(--tsdraw-shadow);
   color: var(--tsdraw-color-text);
   overflow: hidden;
-  pointer-events: all;
   z-index: 120;
   padding-top: 8px;
 }

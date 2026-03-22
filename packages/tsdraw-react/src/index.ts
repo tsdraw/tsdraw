@@ -15,14 +15,14 @@ export type {
   TsdrawStylePanelPartItem,
   TsdrawStylePanelCustomPart,
   TsdrawStylePanelRenderContext,
-} from './components/StylePanel.js';
+} from './components/ui/StylePanel.js';
 export type {
   TsdrawMountApi,
   TsdrawCursorContext,
   TsdrawToolOverlayState,
 } from './canvas/useTsdrawCanvasController.js';
-export { getDefaultToolbarIcon } from './components/Toolbar.js';
-export type { ToolbarActionItem, ToolbarPart, ToolbarRenderItem, ToolbarToolItem } from './components/Toolbar.js';
+export { getDefaultToolbarIcon } from './components/ui/Toolbar.js';
+export type { ToolbarActionItem, ToolbarPart, ToolbarRenderItem, ToolbarToolItem } from './components/ui/Toolbar.js';
 export { TsdrawCanvas } from './components/TsdrawCanvas.js';
 export type { TsdrawCanvasProps } from './components/TsdrawCanvas.js';
 export type {

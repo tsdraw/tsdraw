@@ -109,13 +109,13 @@ export function App() {
 
   const confettiButton: TsdrawCustomElement = {
     id: 'confetti-btn',
-    placement: { anchor: 'top-left', offsetX: 18, offsetY: 18 },
+    placement: { anchor: 'top-left', edgeOffset: 18 },
     render: () => <button className="custom-btn" onClick={triggerConfetti}>more confetti!</button>,
   };
 
   const randomStyleButton: TsdrawCustomElement = {
     id: 'higher-stroke-btn',
-    placement: { anchor: 'bottom-right', offsetX: 18, offsetY: 18 },
+    placement: { anchor: 'bottom-right', edgeOffset: 18 },
     render: ({ applyDrawStyle }) => (
       <button
         className="custom-btn"
@@ -171,11 +171,14 @@ export function App() {
         initialToolId="pen"
         uiOptions={{
           toolbar: { // top-left, bottom-center, center-right, left-center, ... (it can be any valid anchor)
-            placement: { anchor: 'top-center', offsetX: 0, offsetY: 18 },
+            placement: { anchor: 'top-center', edgeOffset: 18, style: { border: '1px solid var(--tsdraw-color-selected)' } },
             parts: [['undo', 'redo'], ['select', 'hand', 'pen', 'square', 'eraser', 'wavy', 'emoji']],
+            draggable: true,
+            saveDraggedPosition: true,
+            disabledDragPositions: ['top-left', 'bottom-right'],
           },
           stylePanel: {
-            placement: { anchor: 'top-right', offsetX: 18, offsetY: 18 },
+            placement: { anchor: 'top-right', edgeOffset: 18 },
             hide: false,
           },
           customElements: [confettiButton, randomStyleButton],
