@@ -44,3 +44,16 @@ jobs:
         run: npm run publish:changed
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Redeploy tsdraw.com
+        env:
+          TSDRAW_DEPLOY: ${{ secrets.TSDRAW_DEPLOY }}
+        run: |
+          if [ -z "$TSDRAW_DEPLOY" ]; then
+            echo "Deploy secret not configured"
+            exit 0
+          fi
+          if ! curl -fs -X POST "$TSDRAW_DEPLOY" -o /dev/null 2>/dev/null; then
+            echo "Deploy request failed"
+            exit 1
+          fi
