@@ -1,0 +1,36 @@
+---
+title: "Touch interactions"
+description: "Multi-touch gestures for mobile and tablet devices"
+---
+
+tsdraw handles multi-touch input out of the box, including pinch-to-zoom, two-finger pan, and tap gestures.
+
+## Gestures
+
+| Gesture | Action |
+| --- | --- |
+| Single finger | Use current tool |
+| Two fingers | Pan |
+| Pinch | Zoom |
+| Two-finger tap | Undo |
+| Three-finger tap | Redo |
+
+## Customizing
+
+```tsx
+<Tsdraw touchOptions={{ tapUndoRedo: false }} />
+```
+
+## Stylus (Pen)
+
+tsdraw detects pressure-sensitive pens and records pressure in the `z` coordinate.
+
+```tsx
+<Tsdraw penOptions={{ pressureSensitivity: 0.5 }} />
+```
+
+## Trackpads
+
+Supported natively:
+- Two-finger scroll to pan
+- Pinch to zoom

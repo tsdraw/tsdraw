@@ -1,0 +1,71 @@
+---
+title: "Renderer"
+description: "API reference for the canvas renderer"
+---
+
+The `CanvasRenderer` draws shapes onto an HTML canvas using the Canvas 2D API.
+
+```typescript
+import { CanvasRenderer } from '@tsdraw/core'
+```
+
+## ICanvasRenderer interface
+
+```typescript
+interface ICanvasRenderer {
+  render(
+    ctx: CanvasRenderingContext2D,
+    shapes: Shape[],
+    viewport: Viewport,
+    theme: TsdrawRenderTheme
+  ): void
+}
+```
+
+## CanvasRenderer
+
+The default implementation. Renders strokes using `perfect-freehand` for the `draw` dash style, and Canvas 2D `setLineDash` for other styles.
+
+### Rendering pipeline
+
+1. Apply viewport transform (translate + scale)
+2. For each visible shape, decode segment paths and render strokes
+3. For closed shapes with fill, render the fill first, then the stroke
+
+## TsdrawRenderTheme
+
+```typescript
+interface TsdrawRenderTheme {
+  resolveColor(colorKey: string): string
+}
+```
+
+Maps palette keys (e.g. `'blue'`) to hex colors, adapting for the current light/dark theme.
+
+### resolveThemeColor
+
+```typescript
+import { resolveThemeColor } from '@tsdraw/core'
+
+const hex = resolveThemeColor(theme, 'blue')
+```
+
+## Background renderer
+
+```typescript
+import { renderCanvasBackground } from '@tsdraw/core'
+
+type TsdrawBackgroundType = 'blank' | 'lines' | 'grid' | 'dots'
+```
+
+Draws a background pattern behind shapes. The pattern scales with the viewport zoom for consistent visual density.
+
+```typescript
+renderCanvasBackground(
+  ctx: CanvasRenderingContext2D,
+  viewport: Viewport,
+  canvasWidth: number,
+  canvasHeight: number,
+  options: TsdrawBackgroundOptions
+): void
+```

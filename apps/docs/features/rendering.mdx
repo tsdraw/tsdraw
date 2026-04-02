@@ -1,0 +1,58 @@
+---
+title: "Rendering"
+description: "How tsdraw draws shapes on the canvas"
+---
+
+tsdraw renders shapes on an HTML `<canvas>` element using the Canvas 2D API. The `CanvasRenderer` in `@tsdraw/core` handles stroke rendering, fill patterns, and viewport transformations.
+
+## Render pipeline
+
+Each frame, the renderer:
+
+1. Clears the canvas
+2. Draws the background pattern (if configured)
+3. Transforms the context by the current viewport (pan and zoom)
+4. Iterates through shapes in z-order
+5. Renders each shape's segments with the appropriate style
+
+## Stroke rendering
+
+Freehand strokes use the [perfect-freehand](https://github.com/steveruizok/perfect-freehand) library to generate smooth, pressure-sensitive outlines. When a shape was drawn with a stylus (`isPen: true`), the pressure data in each point's `z` value controls the stroke width.
+
+For `solid`, `dashed`, and `dotted` dash styles, the renderer uses the Canvas 2D `setLineDash` API instead of `perfect-freehand`.
+
+## Fill rendering
+
+Closed shapes (rectangles, ellipses) support four fill modes:
+
+| Fill | Rendering |
+| --- | --- |
+| `none` | Stroke only |
+| `semi` | Fill with reduced opacity |
+| `solid` | Opaque fill |
+| `blank` | No visible rendering (useful for hit-testing regions) |
+
+## Shape ordering
+
+Shapes render in creation order. The document store maintains this ordering, and the renderer iterates shapes sorted by their index. Newer shapes draw on top of older ones.
+
+## Performance
+
+The renderer only draws shapes that are visible within the current viewport. Shapes outside the viewport bounds are culled to avoid unnecessary draw calls.
+
+For very dense canvases, the base64-encoded path format and the culling system keep frame times low even with hundreds of shapes.
+
+## The ICanvasRenderer interface
+
+The `CanvasRenderer` implements the `ICanvasRenderer` interface. This abstraction exists to support alternative rendering backends in the future.
+
+```typescript
+interface ICanvasRenderer {
+  render(
+    ctx: CanvasRenderingContext2D,
+    shapes: Shape[],
+    viewport: Viewport,
+    theme: TsdrawRenderTheme
+  ): void
+}
+```

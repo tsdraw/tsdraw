@@ -1,0 +1,58 @@
+---
+title: "Document store"
+description: "API reference for the DocumentStore class"
+---
+
+The `DocumentStore` manages the collection of shapes and their ordering on the canvas.
+
+```typescript
+import { DocumentStore } from '@tsdraw/core'
+```
+
+## Methods
+
+| Method | Returns | Description |
+| --- | --- | --- |
+| `createShape(shape)` | `void` | Add a shape to the store |
+| `updateShape(id, partial)` | `void` | Update shape properties |
+| `deleteShape(id)` | `void` | Remove a shape |
+| `getShape(id)` | `Shape \| undefined` | Get a shape by ID |
+| `getCurrentPageShapes()` | `Shape[]` | All shapes in insertion order |
+| `getCurrentPageShapesSorted()` | `Shape[]` | Shapes sorted by z-index |
+| `getCurrentPageRenderingShapesSorted()` | `Shape[]` | Shapes filtered and sorted for rendering |
+| `getShapeIdsInBounds(bounds)` | `ShapeId[]` | Find shapes that overlap with a bounding rectangle |
+
+## Listeners
+
+The store notifies listeners when shapes change:
+
+```typescript
+const unsubscribe = store.addListener(() => {
+  console.log('Shapes changed:', store.getCurrentPageShapes().length)
+})
+
+// later
+unsubscribe()
+```
+
+## Snapshot types
+
+```typescript
+interface TsdrawDocumentSnapshot {
+  records: TsdrawPersistedRecord[]
+}
+
+interface TsdrawPersistedRecord {
+  typeName: 'page' | 'shape'
+  // ... record data
+}
+```
+
+### Conversion utilities
+
+```typescript
+import { documentSnapshotToRecords, recordsToDocumentSnapshot } from '@tsdraw/core'
+
+const records = documentSnapshotToRecords(snapshot)
+const snapshot = recordsToDocumentSnapshot(records)
+```

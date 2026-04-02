@@ -1,0 +1,67 @@
+---
+title: "✅ Installation"
+description: "Install and configure the tsdraw packages for your app"
+---
+
+Most devs only really need `@tsdraw/react`, which includes the react component:
+
+<CodeGroup>
+```bash npm
+npm install @tsdraw/react
+```
+
+```bash yarn
+yarn add @tsdraw/react
+```
+
+```bash pnpm
+pnpm add @tsdraw/react
+```
+</CodeGroup>
+
+Remember to import the stylesheet in your app:
+
+```tsx
+import '@tsdraw/react/tsdraw.css'
+```
+
+### Requirements
+
+- React 18.0+ or 19.0+
+- A bundler supporting CSS imports (Vite, Next.js, Webpack, etc.)
+
+## Core engine (Headless)
+
+If you're using another framework, install the core engine directly:
+
+```bash
+npm install @tsdraw/core
+```
+
+`@tsdraw/core` is framework-agnostic and provides the `Editor`, shape system, tools, and rendering (but you have to do the rest yourself).
+
+## Package overview
+
+| Package | Description | Dependencies |
+| --- | --- | --- |
+| `@tsdraw/core` | Base engine, tools, shapes, viewport, persistence | `perfect-freehand` |
+| `@tsdraw/react` | React component, toolbar, style panel, touch/keyboard handling | `@tsdraw/core`, `@tabler/icons-react` |
+
+## Verifying the installation
+
+After installing, create a short component to make sure everything works:
+
+```tsx
+import { Tsdraw } from '@tsdraw/react'
+import '@tsdraw/react/tsdraw.css'
+
+export default function App() {
+  return (
+    <div style={{ width: '100%', height: 400 }}>
+      <Tsdraw />
+    </div>
+  )
+}
+```
+
+For `@tsdraw/core`, since this is more complex, you probably should look through [the source code](https://github.com/tsdraw/tsdraw/tree/main/packages/tsdraw-core) or [reference](/reference/core/editor) for more information.

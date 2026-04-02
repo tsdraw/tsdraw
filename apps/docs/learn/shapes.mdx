@@ -1,0 +1,61 @@
+---
+title: "Shapes"
+description: "Visual elements on the canvas"
+---
+
+Objects on the canvas are stored as shapes in a record keyed by `ShapeId`.
+
+## Types
+
+tsdraw includes one shape type with variations:
+
+| Tool | Shape type | Geometry |
+| --- | --- | --- |
+| Pen | `draw` | Freehand strokes |
+| Square | `draw` | Rectangles |
+| Circle | `draw` | Ellipses |
+
+## Interface
+
+```typescript
+interface DrawShape {
+  id: ShapeId
+  type: 'draw'
+  x: number
+  y: number
+  props: {
+    color: ColorStyle
+    dash: DashStyle
+    fill: FillStyle
+    size: SizeStyle
+    segments: DrawSegment[]
+  }
+}
+```
+
+- **x / y** — top-left origin in page coordinates
+- **segments** — array of `DrawSegment` (base64-encoded paths)
+
+## Styles
+
+Shapes inherit style from the editor at creation:
+
+- **Color** — CSS or palette key
+- **Size** — `'s'` (2px), `'m'` (3.5px), `'l'` (5px), `'xl'` (10px)
+- **Dash** — `'draw'`, `'solid'`, `'dashed'`, `'dotted'`
+- **Fill** — `'none'`, `'semi'`, `'solid'`, `'blank'`
+
+## Selection
+
+The **select** tool picks and manipulates shapes (move, resize, rotate).
+
+## Codecs
+
+Convert between points and base64 paths:
+
+```typescript
+import { encodePoints, decodePoints } from '@tsdraw/core'
+
+const encoded = encodePoints([{ x: 0, y: 0 }])
+const decoded = decodePoints(encoded)
+```

@@ -1,0 +1,54 @@
+---
+title: "Camera"
+description: "Pan and zoom the viewport"
+---
+
+The camera is represented by a `Viewport`:
+
+```typescript
+interface Viewport {
+  x: number
+  y: number
+  zoom: number
+}
+```
+
+## Control
+
+```tsx
+editor.setViewport({ x: 0, y: 0, zoom: 1 })
+editor.zoomIn()
+```
+
+## Range
+
+The default range is 0.1 to 8. Customize via props:
+
+```tsx
+<Tsdraw cameraOptions={{ zoomRange: { min: 0.5, max: 4 } }} />
+```
+
+## Interaction
+
+Users can pan via:
+- **Hand tool**
+- **Two-finger drag** (trackpad/touch)
+- **Space + drag**
+
+Fast pans include deceleration momentum (slide).
+
+## Coordinates
+
+Convert between screen (pixel) and page (canvas) space:
+
+```typescript
+import { screenToPage, pageToScreen } from '@tsdraw/core'
+
+const pagePoint = screenToPage(viewport, x, y)
+```
+
+## Listeners
+
+```tsx
+<Tsdraw onCameraChange={(vp) => console.log(vp)} />
+```

@@ -1,0 +1,66 @@
+---
+title: "Tsdraw component"
+description: "API reference for the main React component"
+---
+
+The `Tsdraw` component renders a complete drawing canvas with toolbar, style panel, and all built-in tools.
+
+```tsx
+import { Tsdraw } from '@tsdraw/react'
+import '@tsdraw/react/tsdraw.css'
+```
+
+## Basic usage
+
+```tsx
+<Tsdraw />
+```
+
+A full-featured canvas with default settings. See [props](/reference/react/props) for all configuration options.
+
+## With persistence
+
+```tsx
+<Tsdraw persistenceKey="my-canvas" />
+```
+
+## With custom tools and UI
+
+```tsx
+<Tsdraw
+  customTools={[myTool]}
+  initialToolId="pen"
+  theme="dark"
+  uiOptions={{
+    toolbar: {
+      parts: [['undo', 'redo'], ['pen', 'eraser', 'select']],
+      draggable: true,
+    },
+  }}
+  background={{ type: 'grid' }}
+/>
+```
+
+## Aliases
+
+`TsdrawCanvas` is an alias for `Tsdraw`. Both export the same component:
+
+```tsx
+import { TsdrawCanvas } from '@tsdraw/react'
+```
+
+## Styling
+
+The component fills its container by default. Set `width` and `height` props or use CSS on the parent element to control the size:
+
+```tsx
+<div style={{ width: 800, height: 600 }}>
+  <Tsdraw />
+</div>
+```
+
+The `className` and `style` props are forwarded to the root element:
+
+```tsx
+<Tsdraw className="my-canvas" style={{ borderRadius: 8 }} />
+```

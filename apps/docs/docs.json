@@ -1,0 +1,140 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "tsdraw",
+  "colors": {
+    "primary": "#000",
+    "light": "#fff",
+    "dark": "#000"
+  },
+  "favicon": "/favicon.png",
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "navbar": {
+    "links": [
+      {
+        "type": "discord",
+        "href": "https://discord.gg/jAmRTeJTRU"
+      },
+      {
+        "type": "github",
+        "href": "https://github.com/tsdraw/tsdraw"
+      }
+    ]
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Introduction",
+            "pages": [
+              "quickstart",
+              "installation",
+              "releases"
+            ]
+          },
+          {
+            "group": "Learn tsdraw",
+            "pages": [
+              "learn/editor",
+              "learn/shapes",
+              "learn/tools",
+              "learn/user-interface",
+              "learn/persistence"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "features/camera",
+              "features/custom-tools",
+              "features/keyboard-shortcuts",
+              "features/touch",
+              "features/backgrounds",
+              "features/styles",
+              "features/undo-redo",
+              "features/rendering",
+              "features/input-handling"
+            ]
+          },
+          {
+            "group": "Community",
+            "pages": [
+              "community/contributing",
+              "community/license"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Reference",
+        "groups": [
+          {
+            "group": "API reference",
+            "pages": [
+              "reference/overview"
+            ]
+          },
+          {
+            "group": "@tsdraw/core",
+            "pages": [
+              "reference/core/editor",
+              "reference/core/shapes",
+              "reference/core/tools",
+              "reference/core/viewport",
+              "reference/core/document-store",
+              "reference/core/renderer"
+            ]
+          },
+          {
+            "group": "@tsdraw/react",
+            "pages": [
+              "reference/react/tsdraw-component",
+              "reference/react/props",
+              "reference/react/hooks"
+            ]
+          }
+        ]
+      }
+    ],
+    "global": {
+      "anchors": [
+        {
+          "anchor": "Quickstart",
+          "href": "/quickstart",
+          "icon": "rocket"
+        },
+        {
+          "anchor": "Documentation",
+          "href": "/learn/editor",
+          "icon": "graduation-cap"
+        },
+        {
+          "anchor": "Reference",
+          "href": "/reference/overview",
+          "icon": "list"
+        }
+      ]
+    }
+  },
+  "contextual": {
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude",
+      "cursor",
+      "vscode"
+    ]
+  },
+  "footer": {
+    "socials": {
+      "discord": "https://discord.gg/jAmRTeJTRU",
+      "github": "https://github.com/tsdraw/tsdraw"
+    }
+  }
+}

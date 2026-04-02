@@ -1,0 +1,81 @@
+---
+title: "Editor"
+description: "The central object orchestrating shapes, tools, and viewport"
+---
+
+The `Editor` is the main entry point into the tsdraw engine. It coordinates the document store, viewport, input, tools, and rendering.
+
+In `@tsdraw/react`, access it via `onMount`:
+
+```tsx
+import { Tsdraw, type TsdrawMountApi } from '@tsdraw/react'
+
+function App() {
+  const handleMount = (api: TsdrawMountApi) => {
+    const editor = api.editor
+    // use the editor
+  }
+
+  return <Tsdraw onMount={handleMount} />
+}
+```
+
+## Subsystems
+
+| Subsystem | Property | Description |
+| --- | --- | --- |
+| Store | `editor.store` | Shape data and ordering |
+| Viewport | `editor.viewport` | Camera `x`, `y`, and `zoom` |
+| Tools | `editor.tools` | Active tool and state routing |
+| Renderer | `editor.renderer` | Canvas 2D rendering |
+
+## Managing shapes
+
+```tsx
+const shapes = editor.getShapes()
+editor.deleteShape(id)
+editor.clearAllShapes()
+```
+
+## Draw styles
+
+New shapes inherit the current style:
+
+```tsx
+editor.setDrawStyle({ color: 'blue', size: 'l', dash: 'solid' })
+```
+
+- **color** — CSS color or palette key
+- **size** — `'s'`, `'m'`, `'l'`, `'xl'`
+- **dash** — `'draw'`, `'solid'`, `'dashed'`, `'dotted'`
+- **fill** — `'none'`, `'semi'`, `'solid'`, `'blank'`
+
+## Selecting tools
+
+```tsx
+editor.setCurrentTool('pen')
+editor.setCurrentTool('eraser')
+```
+
+## Viewport control
+
+```tsx
+editor.setViewport({ x: 0, y: 0, zoom: 1 })
+editor.zoomIn()
+```
+
+## Undo and redo
+
+```tsx
+editor.undo()
+editor.redo()
+```
+
+## Snapshots
+
+Snapshots are plain objects for serialization:
+
+```tsx
+const snapshot = editor.getSnapshot()
+editor.loadSnapshot(snapshot)
+```

@@ -1,0 +1,36 @@
+---
+title: "API reference"
+description: "Complete API documentation for tsdraw packages"
+---
+
+This section provides detailed API documentation for both tsdraw packages. Currently, the API reference is mainly AI-generated, but when I have time, I'll be writing it myself.
+
+## Packages
+
+<Columns cols={2}>
+  <Card title="@tsdraw/core" icon="js" href="/reference/core/editor">
+    The framework-agnostic drawing engine. Shapes, tools, viewport, document store, and rendering.
+  </Card>
+  <Card title="@tsdraw/react" icon="react" href="/reference/react/tsdraw-component">
+    React component layer. The Tsdraw component, props, toolbar, style panel, and hooks.
+  </Card>
+</Columns>
+
+## @tsdraw/core
+
+| Module | Description |
+| --- | --- |
+| [Editor](/reference/core/editor) | Central orchestrator — shapes, tools, viewport, undo/redo |
+| [Shapes](/reference/core/shapes) | Shape types, DrawShape interface, style types |
+| [Tools](/reference/core/tools) | ToolManager, ToolDefinition, StateNode |
+| [Viewport](/reference/core/viewport) | Camera position and zoom, coordinate conversion |
+| [Document store](/reference/core/document-store) | Shape storage and ordering |
+| [Renderer](/reference/core/renderer) | Canvas rendering, stroke rendering, fills |
+
+## @tsdraw/react
+
+| Module | Description |
+| --- | --- |
+| [Tsdraw component](/reference/react/tsdraw-component) | The main React component |
+| [Props](/reference/react/props) | TsdrawProps and all option types |
+| [Hooks](/reference/react/hooks) | Canvas controller and internal hooks |

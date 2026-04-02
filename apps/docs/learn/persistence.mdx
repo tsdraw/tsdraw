@@ -1,0 +1,47 @@
+---
+title: "Persistence"
+description: "Save and restore the canvas state"
+---
+
+## IndexedDB
+
+The easiest way to persist state is the `persistenceKey` prop. It stores the document in IndexedDB and enables cross-tab sync.
+
+```tsx
+<Tsdraw persistenceKey="my-canvas" />
+```
+
+## Snapshots
+
+Snapshots are JSON-serializable objects.
+
+### Saving
+```tsx
+const snapshot = editor.getSnapshot()
+localStorage.setItem('canvas', JSON.stringify(snapshot))
+```
+
+### Loading
+```tsx
+<Tsdraw snapshot={JSON.parse(localStorage.getItem('canvas'))} />
+```
+
+## Callbacks
+
+React to changes in real-time:
+
+```tsx
+<Tsdraw
+  onChange={(doc) => {
+    console.log('Shapes:', doc.records.length)
+  }}
+/>
+```
+
+## Record Types
+
+Snapshots use flat arrays of `TsdrawPersistedRecord` (`'page'` or `'shape'`). Convert them using core utilities:
+
+```typescript
+import { documentSnapshotToRecords, recordsToDocumentSnapshot } from '@tsdraw/core'
+```

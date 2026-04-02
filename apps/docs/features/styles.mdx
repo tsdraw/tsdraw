@@ -1,0 +1,42 @@
+---
+title: "Styles"
+description: "Colors, sizes, dashes, and fills"
+---
+
+Shapes have four style axes: **color**, **size**, **dash**, and **fill**.
+
+## Color
+
+Use palette keys or any CSS color:
+`black`, `grey`, `blue`, `orange`, `green`, `red`, `white`, etc.
+
+```tsx
+editor.setDrawStyle({ color: '#ff00ff' })
+```
+
+## Size
+
+| Key | Width |
+| --- | --- |
+| `s` | 2px |
+| `m` | 3.5px |
+| `l` | 5px |
+| `xl` | 10px |
+
+## Dash
+
+`draw` (freehand), `solid`, `dashed`, `dotted`.
+
+## Fill
+
+`none`, `semi` (translucent), `solid`, `blank` (hit-test only).
+
+## Usage
+
+```tsx
+editor.setDrawStyle({
+  color: 'blue',
+  size: 'l',
+  dash: 'solid',
+})
+```

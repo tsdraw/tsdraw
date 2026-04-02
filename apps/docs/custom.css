@@ -1,0 +1,2 @@
+.navbar-link > a > *:not(svg) { display: none !important; }
+.navbar-link > a { gap: 0 !important; }

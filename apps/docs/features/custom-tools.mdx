@@ -1,0 +1,53 @@
+---
+title: "Custom tools"
+description: "Add your own tools alongside the built-in ones"
+---
+
+Define a `ToolDefinition` (engine) and `TsdrawCustomTool` (UI):
+
+```tsx
+import { Tsdraw, type TsdrawCustomTool } from '@tsdraw/react'
+import { ToolDefinition, StateNode } from '@tsdraw/core'
+
+class StampIdleState implements StateNode {
+  readonly id = 'idle'
+  onPointerDown(info) {
+    info.context.editor.setDrawStyle({ color: 'violet' })
+  }
+}
+
+const stampTool: TsdrawCustomTool = {
+  id: 'stamp',
+  label: 'Stamp',
+  icon: <span>🔖</span>,
+  definition: {
+    id: 'stamp',
+    initialStateId: 'idle',
+    stateConstructors: [() => new StampIdleState()],
+  },
+}
+
+function App() {
+  return <Tsdraw customTools={[stampTool]} />
+}
+```
+
+## StateNode Interface
+
+Implement these methods to handle events:
+- `onEnter` / `onExit`
+- `onPointerDown` / `onPointerMove` / `onPointerUp`
+- `onKeyDown` / `onKeyUp`
+
+Transition via `info.context.transition(stateId)`.
+
+## Style Panels
+
+Enable styles for your tool:
+```tsx
+const stampTool: TsdrawCustomTool = {
+  // ...
+  stylePanel: { parts: ['colors', 'sizes'] },
+}
+```
+Available: `'colors'`, `'dashes'`, `'fills'`, `'sizes'`.

@@ -1,0 +1,69 @@
+---
+title: "✅ Quick start"
+description: "Get a canvas running in under five minutes"
+---
+
+## Now, to begin...
+
+Firstly, install `@tsdraw/react` (it includes the core engine):
+
+```bash
+npm install @tsdraw/react
+```
+
+Then import the component and styles, and render:
+
+```tsx
+import { Tsdraw } from '@tsdraw/react'
+import '@tsdraw/react/tsdraw.css'
+
+export default function App() {
+  return (
+    <div style={{ position: 'fixed', inset: 0 }}>
+      <Tsdraw />
+    </div>
+  )
+}
+```
+
+You now have a functional canvas with drawing, erasing, selection, and panning. That's literally it. Now, let's add some more cool features...
+
+## Persistence
+
+Persistence is when the state of the canvas stays constant. To enable persistence, pass a `persistenceKey` to the `Tsdraw` component. The state now lives in your browser.
+
+```tsx
+<Tsdraw persistenceKey="my-canvas" />
+```
+
+## Backgrounds
+
+Want a grid, lines, or dots as the background of your canvas? Just pass a `background` prop to the `Tsdraw` component. I told you, tsdraw is truly that customizable.
+
+```tsx
+<Tsdraw background={{ type: 'grid' }} />
+```
+
+## The Editor
+
+Now, to access the `Editor` instance, which manages shapes, tools, and the viewport, just pass a `onMount` callback to the `Tsdraw` component.
+
+```tsx
+import { Tsdraw, type TsdrawMountApi } from '@tsdraw/react'
+
+function App() {
+  const handleMount = (api: TsdrawMountApi) => {
+    console.log('Editor ready. Bomb deploying...', api.editor)
+  }
+
+  return <Tsdraw onMount={handleMount} />
+}
+```
+
+## Next steps
+
+Now that you have a working canvas:
+
+- Learn more about the [editor](/learn/editor) and what it can do
+- Explore the built-in [shapes](/learn/shapes) and [tools](/learn/tools), and make your own [custom tools](/features/custom-tools)
+- Customize the [user interface](/learn/user-interface) to your liking

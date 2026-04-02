@@ -1,0 +1,40 @@
+---
+title: "Tools"
+description: "User interaction modes"
+---
+
+Tools define what happens during canvas events.
+
+## Built-in tools
+
+| Tool ID | What it does |
+| --- | --- |
+| `select` | Move, resize, and rotate shapes |
+| `hand` | Pan the canvas |
+| `pen` | Freehand drawing |
+| `eraser` | Swipe to delete shapes |
+| `square` | Rectangles |
+| `circle` | Ellipses |
+
+## Switching tools
+
+```tsx
+editor.setCurrentTool('pen')
+```
+
+## State machines
+
+Tools are state machines that respond to pointer and keyboard events. For example, the pen tool transitions between **Idle** and **Drawing** states.
+
+Add custom tools via the `customTools` prop on `<Tsdraw />`.
+
+## Eraser
+
+The eraser uses hit-testing with a configurable margin (`ERASER_MARGIN`). Shapes are deleted only when the stroke completes.
+
+## Selection
+
+The `select` tool supports:
+- **Click** — pick top shape
+- **Marquee** — drag to select area
+- **Transform** — move, resize, rotate

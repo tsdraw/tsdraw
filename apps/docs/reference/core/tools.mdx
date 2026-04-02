@@ -1,0 +1,91 @@
+---
+title: "Tools"
+description: "API reference for the tool system"
+---
+
+## ToolManager
+
+```typescript
+import { ToolManager } from '@tsdraw/core'
+```
+
+The `ToolManager` handles tool registration, activation, and event routing.
+
+| Method | Description |
+| --- | --- |
+| `registerTool(definition)` | Register a tool definition |
+| `setCurrentTool(id)` | Activate a tool by ID |
+| `getCurrentToolId()` | Get the active tool ID |
+
+## ToolDefinition
+
+```typescript
+interface ToolDefinition {
+  id: ToolId
+  initialStateId: string
+  stateConstructors: StateNodeConstructor[]
+}
+```
+
+| Property | Description |
+| --- | --- |
+| `id` | Unique tool identifier |
+| `initialStateId` | The state to enter when the tool activates |
+| `stateConstructors` | Factory functions that create `StateNode` instances |
+
+## ToolId
+
+```typescript
+type ToolId = string
+type DefaultToolId = 'pen' | 'eraser' | 'select' | 'hand' | 'square' | 'circle'
+```
+
+## StateNode
+
+The `StateNode` base class defines the interface that every tool state must implement.
+
+| Method | Receives | Description |
+| --- | --- | --- |
+| `onEnter(info)` | `ToolStateTransitionInfo` | Called when entering this state |
+| `onExit(info)` | `ToolStateTransitionInfo` | Called when leaving this state |
+| `onPointerDown(info)` | `ToolPointerDownInfo` | Pointer pressed |
+| `onPointerMove(info)` | `ToolPointerMoveInfo` | Pointer moved |
+| `onPointerUp(info)` | `ToolPointerMoveInfo` | Pointer released |
+| `onKeyDown(info)` | `ToolKeyInfo` | Key pressed |
+| `onKeyUp(info)` | `ToolKeyInfo` | Key released |
+
+## ToolStateContext
+
+```typescript
+interface ToolStateContext {
+  editor: Editor
+  transition: (stateId: string) => void
+}
+```
+
+Passed to state nodes so they can access the editor and transition between states.
+
+## Event info types
+
+```typescript
+interface ToolPointerDownInfo {
+  context: ToolStateContext
+  pagePoint: Vec3
+  screenPoint: Vec3
+}
+
+interface ToolPointerMoveInfo {
+  context: ToolStateContext
+  pagePoint: Vec3
+  screenPoint: Vec3
+}
+
+interface ToolKeyInfo {
+  context: ToolStateContext
+  key: string
+  shiftKey: boolean
+  ctrlKey: boolean
+  altKey: boolean
+  metaKey: boolean
+}
+```

@@ -1,0 +1,63 @@
+---
+title: "User interface"
+description: "Customize the toolbar, style panel, and other UI elements"
+---
+
+The `@tsdraw/react` package includes a toolbar and style panel, configurable via `uiOptions`.
+
+## Toolbar
+
+### Hiding
+```tsx
+<Tsdraw uiOptions={{ toolbar: { hide: true } }} />
+```
+
+### Layout
+The `parts` option controls grouping:
+```tsx
+<Tsdraw uiOptions={{ toolbar: { parts: [['pen'], ['undo']] } }} />
+```
+
+### Placement
+Position relative to the edge:
+```tsx
+<Tsdraw uiOptions={{ toolbar: { placement: { anchor: 'bottom-right' } } }} />
+```
+
+### Draggable
+```tsx
+<Tsdraw uiOptions={{ toolbar: { draggable: true, saveDraggedPosition: true } }} />
+```
+
+## Style panel
+
+### Hiding
+```tsx
+<Tsdraw uiOptions={{ stylePanel: { hide: true } }} />
+```
+
+## Custom elements
+
+Add arbitrary overlays:
+```tsx
+<Tsdraw
+  uiOptions={{
+    customElements: [{
+      id: 'logo',
+      render: () => <div>tsdraw</div>
+    }]
+  }}
+/>
+```
+
+## Theming
+
+```tsx
+<Tsdraw theme="light" /> // or "dark", "system"
+```
+
+## Cursors
+
+```tsx
+<Tsdraw uiOptions={{ cursor: { getCursor: (ctx) => 'crosshair' } }} />
+```

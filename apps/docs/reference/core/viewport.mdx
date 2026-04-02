@@ -1,0 +1,100 @@
+---
+title: "Viewport"
+description: "API reference for viewport and camera utilities"
+---
+
+## Viewport
+
+```typescript
+interface Viewport {
+  x: number
+  y: number
+  zoom: number
+}
+```
+
+Represents the camera position and zoom level.
+
+## ZoomRange
+
+```typescript
+interface ZoomRange {
+  min: number
+  max: number
+}
+
+const DEFAULT_ZOOM_RANGE: ZoomRange = { min: 0.1, max: 8 }
+```
+
+## Functions
+
+### createViewport
+
+```typescript
+function createViewport(): Viewport
+```
+
+Returns a viewport at the origin with zoom `1`.
+
+### screenToPage
+
+```typescript
+function screenToPage(viewport: Viewport, screenX: number, screenY: number): { x: number; y: number }
+```
+
+Converts screen (pixel) coordinates to page (world) coordinates.
+
+### pageToScreen
+
+```typescript
+function pageToScreen(viewport: Viewport, pageX: number, pageY: number): { x: number; y: number }
+```
+
+Converts page coordinates to screen coordinates.
+
+### setViewport
+
+```typescript
+function setViewport(viewport: Viewport, next: Partial<Viewport>): Viewport
+```
+
+Returns a new viewport with the specified properties merged in.
+
+### panViewport
+
+```typescript
+function panViewport(viewport: Viewport, deltaX: number, deltaY: number): Viewport
+```
+
+Returns a new viewport translated by the given deltas.
+
+### zoomViewport
+
+```typescript
+function zoomViewport(viewport: Viewport, factor: number, centerX: number, centerY: number): Viewport
+```
+
+Returns a new viewport zoomed by the given factor, centered on the given screen point.
+
+### clampZoom
+
+```typescript
+function clampZoom(viewport: Viewport, range: ZoomRange): Viewport
+```
+
+Clamps the viewport zoom to the given range.
+
+## Camera pan session
+
+```typescript
+function beginCameraPan(viewport: Viewport): CameraPanSession
+function moveCameraPan(session: CameraPanSession, deltaX: number, deltaY: number): Viewport
+```
+
+## Camera slide
+
+```typescript
+function startCameraSlide(viewport: Viewport, velocityX: number, velocityY: number, options?: CameraSlideOptions): CameraSlideAnimation
+```
+
+Creates a momentum-based slide animation that decelerates over time.

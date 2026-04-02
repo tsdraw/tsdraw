@@ -1,0 +1,68 @@
+---
+title: "Backgrounds"
+description: "Canvas background patterns and custom rendering"
+---
+
+tsdraw can render patterned backgrounds behind the drawing canvas — useful for graph paper, dotted grids, or branded visuals.
+
+## Preset backgrounds
+
+Four presets are available out of the box:
+
+| Preset | Description |
+| --- | --- |
+| `blank` | No background pattern (default) |
+| `lines` | Horizontal lines |
+| `grid` | Square grid |
+| `dots` | Dot pattern |
+
+```tsx
+<Tsdraw background={{ type: 'lines' }} />
+```
+
+## Custom backgrounds
+
+For full control, pass a custom render function:
+
+```tsx
+<Tsdraw
+  background={{
+    type: 'custom',
+    render: (ctx, viewport, canvasWidth, canvasHeight) => {
+      ctx.fillStyle = '#f0f0f0'
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight)
+      // draw your own pattern
+    },
+  }}
+/>
+```
+
+The `render` function receives a `CanvasRenderingContext2D`, the current `Viewport`, and the canvas dimensions. It's called every frame, so keep it efficient.
+
+## Background types
+
+```typescript
+type TsdrawBackgroundType = 'blank' | 'lines' | 'grid' | 'dots'
+
+type TsdrawBackgroundOptions =
+  | TsdrawBackgroundPreset
+  | TsdrawBackgroundCustom
+
+interface TsdrawBackgroundPreset {
+  type: TsdrawBackgroundType
+}
+
+interface TsdrawBackgroundCustom {
+  type: 'custom'
+  render: (
+    ctx: CanvasRenderingContext2D,
+    viewport: Viewport,
+    width: number,
+    height: number
+  ) => void
+}
+```
+
+## Zoom-responsive patterns
+
+The preset backgrounds scale with the viewport zoom. Lines, grid, and dots maintain consistent visual density at any zoom level.

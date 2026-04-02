@@ -1,0 +1,67 @@
+---
+title: "Props"
+description: "API reference for TsdrawProps and related option types"
+---
+
+## TsdrawProps
+
+All props are optional.
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `width` | `number \| string` | — | Canvas width |
+| `height` | `number \| string` | — | Canvas height |
+| `className` | `string` | — | CSS class for the root element |
+| `style` | `CSSProperties` | — | Inline styles for the root element |
+| `theme` | `'light' \| 'dark' \| 'system'` | `'system'` | Color theme |
+| `persistenceKey` | `string` | — | IndexedDB storage key; enables persistence and cross-tab sync |
+| `customTools` | `TsdrawCustomTool[]` | `[]` | Additional tools to register |
+| `initialToolId` | `ToolId` | — | Tool that's active on mount |
+| `uiOptions` | `TsdrawUiOptions` | — | Toolbar, style panel, cursors, overlays |
+| `onMount` | `(api: TsdrawMountApi) => void \| (() => void)` | — | Called when the editor is ready; return a cleanup function |
+| `cameraOptions` | `TsdrawCameraOptions` | — | Zoom range and camera behavior |
+| `touchOptions` | `TsdrawTouchOptions` | — | Touch gesture toggles |
+| `keyboardShortcuts` | `TsdrawKeyboardShortcutOptions` | — | Keyboard shortcut overrides |
+| `penOptions` | `TsdrawPenOptions` | — | Pressure sensitivity settings |
+| `background` | `TsdrawBackgroundOptions` | `{ type: 'blank' }` | Canvas background pattern |
+| `readOnly` | `boolean` | `false` | Disable drawing and erasing |
+| `autoFocus` | `boolean` | — | Take focus on mount |
+| `snapshot` | `TsdrawEditorSnapshot` | — | Initial editor state |
+| `onChange` | `(snapshot: TsdrawDocumentSnapshot) => void` | — | Document change callback |
+| `onCameraChange` | `(viewport: Viewport) => void` | — | Camera change callback |
+| `onToolChange` | `(toolId: ToolId) => void` | — | Tool switch callback |
+
+## TsdrawUiOptions
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `toolbar.hide` | `boolean` | Hide the toolbar |
+| `toolbar.placement` | `TsdrawUiPlacement` | Toolbar anchor and offset |
+| `toolbar.parts` | `ToolbarPartItem[][]` | Toolbar layout (groups of tool IDs and actions) |
+| `toolbar.draggable` | `boolean` | Allow dragging the toolbar |
+| `toolbar.saveDraggedPosition` | `boolean` | Persist dragged position in session storage |
+| `toolbar.disabledDragPositions` | `UiAnchor[]` | Anchors where the toolbar can't be dropped |
+| `stylePanel.hide` | `boolean` | Hide the style panel |
+| `stylePanel.placement` | `TsdrawUiPlacement` | Style panel anchor and offset |
+| `customElements` | `TsdrawCustomElement[]` | Extra UI elements to render on the canvas |
+| `cursor.getCursor` | `(ctx: TsdrawCursorContext) => string` | Custom cursor logic |
+| `overlays.renderToolOverlay` | `(args) => ReactNode` | Custom tool overlay rendering |
+
+## TsdrawCustomTool
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `id` | `ToolId` | Unique tool identifier |
+| `label` | `string` | Display name |
+| `icon` | `ReactNode` | Toolbar icon |
+| `iconSelected` | `ReactNode` | Icon when tool is active (optional) |
+| `definition` | `ToolDefinition` | Engine-level tool definition |
+| `stylePanel` | `{ parts?, customParts? }` | Style panel config for this tool |
+
+## TsdrawMountApi
+
+Provided to the `onMount` callback:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `editor` | `Editor` | The core editor instance |

@@ -1,0 +1,65 @@
+---
+title: "Input handling"
+description: "How tsdraw processes pointer, keyboard, and touch events"
+---
+
+The `InputManager` in `@tsdraw/core` normalizes raw browser events into a consistent format that tools can consume.
+
+## Pointer events
+
+All mouse, touch, and pen events are unified through the `PointerInput` type:
+
+```typescript
+interface PointerInput {
+  x: number
+  y: number
+  pressure: number
+  pointerId: number
+  pointerType: 'mouse' | 'pen' | 'touch'
+  modifiers: {
+    shift: boolean
+    ctrl: boolean
+    alt: boolean
+    meta: boolean
+  }
+}
+```
+
+The input manager converts screen coordinates to page coordinates using the current viewport before passing events to tools.
+
+## Event routing
+
+Events flow through this chain:
+
+1. **DOM event** fires on the canvas element
+2. **InputManager** normalizes the event into a `PointerInput`
+3. **ToolManager** routes the event to the active tool's current state
+4. **StateNode** handles the event (e.g. start drawing, move a shape, erase)
+
+## Pressure handling
+
+For stylus input, the `pressure` field ranges from `0` to `1`. Mouse and finger input default to `0.5`.
+
+The pen tool records pressure in each point's `z` value, which the renderer uses to vary stroke width.
+
+## Modifier keys
+
+Tools can respond to modifier keys (Shift, Ctrl/Cmd, Alt) through the `modifiers` object on pointer events. For example, holding Shift while using the select tool could constrain movement to one axis.
+
+## Focus management
+
+The canvas captures focus when clicked. The `autoFocus` prop controls whether the canvas takes focus on mount:
+
+```tsx
+<Tsdraw autoFocus={true} />
+```
+
+When the canvas doesn't have focus, keyboard shortcuts and key events are not processed.
+
+## Read-only mode
+
+When `readOnly` is `true`, pointer events still fire but drawing and erasing tools are disabled. The hand tool remains active for panning.
+
+```tsx
+<Tsdraw readOnly={true} />
+```

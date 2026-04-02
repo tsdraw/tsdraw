@@ -1,0 +1,83 @@
+---
+title: "Editor"
+description: "API reference for the Editor class"
+---
+
+The `Editor` class is the main entry point into the tsdraw engine.
+
+```typescript
+import { Editor } from '@tsdraw/core'
+```
+
+## Constructor
+
+```typescript
+new Editor(options?: EditorOptions)
+```
+
+### EditorOptions
+
+| Property | Type | Default | Description |
+| --- | --- | --- | --- |
+| `dragDistanceSquared` | `number` | `36` | Distance threshold for differentiating a click from a drag |
+| `toolDefinitions` | `ToolDefinition[]` | `[]` | Additional tool definitions to register |
+| `initialToolId` | `ToolId` | `'pen'` | The tool that's active on startup |
+| `zoomRange` | `ZoomRange` | `{ min: 0.1, max: 8 }` | Min/max zoom levels |
+
+## Properties
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `store` | `DocumentStore` | Shape storage and ordering |
+| `input` | `InputManager` | Pointer event normalization |
+| `tools` | `ToolManager` | Tool state machine routing |
+| `renderer` | `CanvasRenderer` | Canvas 2D rendering |
+| `viewport` | `Viewport` | Current camera position and zoom |
+
+## Shape methods
+
+| Method | Returns | Description |
+| --- | --- | --- |
+| `getShapes()` | `Shape[]` | All shapes on the current page |
+| `getShapesSorted()` | `Shape[]` | Shapes sorted by z-order |
+| `deleteShape(id)` | `void` | Remove a shape by ID |
+| `clearAllShapes()` | `void` | Remove every shape |
+
+## Style methods
+
+| Method | Returns | Description |
+| --- | --- | --- |
+| `getDrawStyle()` | `DrawStyleState` | Current color, dash, fill, size |
+| `setDrawStyle(partial)` | `void` | Merge partial style into the current draw style |
+
+## Viewport methods
+
+| Method | Returns | Description |
+| --- | --- | --- |
+| `setViewport(viewport)` | `void` | Set camera position and zoom |
+| `zoomIn()` | `void` | Zoom in one step |
+| `zoomOut()` | `void` | Zoom out one step |
+
+## Tool methods
+
+| Method | Returns | Description |
+| --- | --- | --- |
+| `setCurrentTool(id)` | `void` | Switch the active tool |
+| `getCurrentToolId()` | `ToolId` | Get the active tool ID |
+
+## History methods
+
+| Method | Returns | Description |
+| --- | --- | --- |
+| `undo()` | `void` | Undo the last action |
+| `redo()` | `void` | Redo the last undone action |
+| `canUndo()` | `boolean` | Whether undo is available |
+| `canRedo()` | `boolean` | Whether redo is available |
+
+## Snapshot methods
+
+| Method | Returns | Description |
+| --- | --- | --- |
+| `getSnapshot()` | `TsdrawEditorSnapshot` | Full editor state snapshot |
+| `loadSnapshot(snapshot)` | `void` | Restore from a snapshot |
+| `getDocumentSnapshot()` | `TsdrawDocumentSnapshot` | Document-only snapshot |

@@ -1,0 +1,41 @@
+---
+title: "Hooks"
+description: "Internal React hooks used by the Tsdraw component"
+---
+
+The `@tsdraw/react` package uses several internal hooks to manage canvas state. These are not exported as public API, but understanding them helps when building custom integrations.
+
+## useTsdrawCanvasController
+
+The primary hook that wires up the editor, canvas element, event listeners, and rendering loop. It returns:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `canvasRef` | `RefObject<HTMLCanvasElement>` | Ref to attach to the canvas element |
+| `editor` | `Editor` | The core editor instance |
+| `currentTool` | `ToolId` | Currently active tool |
+| `drawStyle` | `DrawStyleState` | Current color, dash, fill, size |
+| `canUndo` | `boolean` | Whether undo is available |
+| `canRedo` | `boolean` | Whether redo is available |
+| `setTool` | `(id: ToolId) => void` | Switch tools |
+| `applyDrawStyle` | `(partial) => void` | Update draw style |
+| `undo` | `() => void` | Undo last action |
+| `redo` | `() => void` | Redo last action |
+
+## Persistence hooks
+
+When `persistenceKey` is set, the component internally manages:
+
+- **IndexedDB storage** via `TsdrawLocalIndexedDb` — saves document and session snapshots
+- **Cross-tab sync** via `BroadcastChannel` — other tabs with the same key receive updates
+- **Session ID** via `getOrCreateSessionId` — tracks the browser session for conflict resolution
+
+## Rendering loop
+
+The canvas controller sets up a `requestAnimationFrame` loop that:
+
+1. Reads the current viewport and shapes from the editor
+2. Calls the renderer to draw the background and shapes
+3. Draws selection and tool overlays on top
+
+The loop runs continuously while the component is mounted and pauses when the tab is hidden.

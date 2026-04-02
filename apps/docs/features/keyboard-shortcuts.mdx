@@ -1,0 +1,33 @@
+---
+title: "Keyboard shortcuts"
+description: "Built-in shortcuts and how to customize them"
+---
+
+tsdraw comes with default keyboard shortcuts for common actions. You can override or disable them through the `keyboardShortcuts` prop.
+
+## Default shortcuts
+
+| Shortcut | Action |
+| --- | --- |
+| `V` | Select |
+| `H` | Hand |
+| `D` | Pen |
+| `E` | Eraser |
+| `R` | Rectangle |
+| `O` | Ellipse |
+| `Cmd+Z` | Undo |
+| `Cmd+Shift+Z` | Redo |
+
+## Customizing
+
+```tsx
+<Tsdraw keyboardShortcuts={{ tools: { pen: 'p' } }} />
+```
+
+## Disabling
+
+```tsx
+<Tsdraw keyboardShortcuts={{ enabled: false }} />
+```
+
+Shortcuts fire only when the canvas has focus.
