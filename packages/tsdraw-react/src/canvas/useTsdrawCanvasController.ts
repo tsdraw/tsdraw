@@ -1081,6 +1081,10 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
       if (ignorePersistenceChanges) return;
       schedulePersist();
     });
+    const cleanupRenderRequest = editor.onRequestRender(() => {
+      render();
+      refreshSelectionBounds(editor);
+    });
 
     resize();
     const ro = new ResizeObserver(resize);
@@ -1155,6 +1159,7 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
       schedulePersistRef.current = null;
       cleanupEditorListener();
       cleanupHistoryListener();
+      cleanupRenderRequest();
       disposeMount?.();
       ro.disconnect();
       canvas.removeEventListener('pointerdown', handlePointerDown);

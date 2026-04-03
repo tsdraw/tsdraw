@@ -123,3 +123,21 @@ export function buildEllipseSegments(width: number, height: number): DrawSegment
 
   return [{ type: 'free', path: encodePoints(sampledPoints) }];
 }
+
+// Build straight segments between consecutive vertices, with possible closing the segment back to the first point
+export function buildPolylineSegments(vertices: Vec3[], closed: boolean): DrawSegment[] {
+  const segments: DrawSegment[] = [];
+  for (let i = 0; i < vertices.length - 1; i++) {
+    segments.push({
+      type: 'straight',
+      path: encodePoints([vertices[i]!, vertices[i + 1]!]),
+    });
+  }
+  if (closed && vertices.length >= 3) {
+    segments.push({
+      type: 'straight',
+      path: encodePoints([vertices[vertices.length - 1]!, vertices[0]!]),
+    });
+  }
+  return segments;
+}

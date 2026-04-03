@@ -6,9 +6,14 @@ import {
 import type { DrawShape, DrawSegment, Vec3 } from '../../../types.js';
 import { STROKE_WIDTHS, MAX_POINTS_PER_SHAPE } from '../../../types.js';
 import { encodePoints, decodePoints, decodeFirstPoint, decodeLastPoint } from '../../../utils/pathCodec.js';
-import { dist, sqDist, withinRadius, toFixed, roundPt, lerpPath, tail, quantizeAngle, rotateAround } from '../../../utils/vec.js';
+import { dist, sqDist, withinRadius, toFixed, roundPt, lerpPath, tail, quantizeAngle, rotateAround, boundingBox } from '../../../utils/vec.js';
+import { recognizeShape, type RecognizedShape, type RecognitionEntryInfo } from '../../../utils/shapeRecognition.js';
+import { buildPolylineSegments, buildEllipseSegments } from '../../geometric/geometricShapeHelpers.js';
 
 type StrokePhase = 'free' | 'straight' | 'starting_straight' | 'starting_free';
+
+const DWELL_TIMEOUT_MS = 500; // start shape snapping 500ms after last move
+const DWELL_MOVE_THRESHOLD = 3; // allow 3px of movement
 
 // State for when pen is being used
 export class PenDrawingState extends StateNode {
@@ -27,10 +32,17 @@ export class PenDrawingState extends StateNode {
   private _pathLen = 0;
   private _activePts: Vec3[] = [];
 
+  private _pointTimestamps: number[] = [];
+  private _dwellTimer: ReturnType<typeof setTimeout> | null = null;
+  private _dwellAnchor: Vec3 = { x: 0, y: 0 };
+
   override onEnter(info?: ToolPointerDownInfo): void {
     this._startInfo = info ?? { point: { x: 0, y: 0, z: 0.5 } };
     this._lastSample = { ...this.editor.input.getCurrentPagePoint() };
+    this._dwellAnchor = { ...this._lastSample };
+    this.editor.beginHistoryEntry();
     this.beginStroke();
+    this.resetDwellTimer();
   }
 
   override onPointerMove(): void {
@@ -53,6 +65,7 @@ export class PenDrawingState extends StateNode {
       this._shouldMerge = false;
     }
     this.advanceStroke();
+    this.trackDwell();
   }
 
   // Shift: start a new straight segment
@@ -90,21 +103,26 @@ export class PenDrawingState extends StateNode {
   }
 
   override onPointerUp(): void {
+    this.clearDwellTimer();
     this.endStroke();
   }
 
+  override onExit(): void {
+    this.clearDwellTimer();
+  }
+
   override onCancel(): void {
+    this.clearDwellTimer();
+    this.editor.endHistoryEntry();
     this.ctx.transition('pen_idle', this._startInfo);
   }
 
   override onInterrupt(): void {
+    this.clearDwellTimer();
     if (!this.editor.input.getIsDragging()) {
+      this.editor.endHistoryEntry();
       this.ctx.transition('pen_idle', this._startInfo);
     }
-  }
-
-  private canClosePath(): boolean {
-    return true;
   }
 
   private detectClosure(
@@ -112,7 +130,7 @@ export class PenDrawingState extends StateNode {
     size: DrawShape['props']['size'],
     scale: number
   ): boolean {
-    if (!this.canClosePath() || segments.length === 0) return false;
+    if (segments.length === 0) return false;
     const w = STROKE_WIDTHS[size];
     const first = decodeFirstPoint(segments[0]!.path);
     const lastSeg = segments[segments.length - 1];
@@ -197,6 +215,7 @@ export class PenDrawingState extends StateNode {
     const id = this.editor.createShapeId();
     const firstPt: Vec3 = { x: 0, y: 0, z: pressure };
     this._activePts = [firstPt];
+    this._pointTimestamps = [performance.now()];
     this.editor.createShape({
       id,
       type: 'draw',
@@ -374,6 +393,7 @@ export class PenDrawingState extends StateNode {
             ? dist(cached[cached.length - 1]!, pt)
             : 0;
           cached.push({ x: pt.x, y: pt.y, z: pt.z });
+          this._pointTimestamps.push(performance.now());
         }
         const updated = segments.slice();
         const lastSeg = updated[updated.length - 1]!;
@@ -404,6 +424,7 @@ export class PenDrawingState extends StateNode {
             z: this._hasPressure ? toFixed((curPage.z ?? 0.5) * 1.25) : 0.5,
           };
           this._activePts = [firstPt];
+          this._pointTimestamps = [performance.now()];
           this.editor.createShape({
             id: newId,
             type: 'draw',
@@ -436,6 +457,100 @@ export class PenDrawingState extends StateNode {
     this.editor.updateShapes([
       { id: this._target.id, type: 'draw', props: { isComplete: true, isPen: this._hasPressure } },
     ]);
+    this.editor.endHistoryEntry();
     this.ctx.transition('pen_idle');
+  }
+
+  private trackDwell(): void {
+    const currentPage = this.editor.input.getCurrentPagePoint();
+    const moveThreshold = DWELL_MOVE_THRESHOLD / this.editor.getZoomLevel();
+    const moved = dist(currentPage, this._dwellAnchor) > moveThreshold;
+
+    if (moved) {
+      this._dwellAnchor = { ...currentPage };
+      this.resetDwellTimer();
+    }
+  }
+
+  private resetDwellTimer(): void {
+    this.clearDwellTimer();
+    this._dwellTimer = setTimeout(() => {
+      this._dwellTimer = null;
+      this.attemptShapeRecognition();
+    }, DWELL_TIMEOUT_MS);
+  }
+
+  private clearDwellTimer(): void {
+    if (this._dwellTimer !== null) {
+      clearTimeout(this._dwellTimer);
+      this._dwellTimer = null;
+    }
+  }
+
+  private attemptShapeRecognition(): void {
+    const target = this._target;
+    if (!target) return;
+
+    const shape = this.editor.getShape(target.id) as DrawShape | undefined;
+    if (!shape) return;
+
+    const pagePoints = this._activePts.map((pt) => ({
+      x: pt.x + shape.x,
+      y: pt.y + shape.y,
+      z: pt.z,
+    }));
+    if (pagePoints.length < 3) return;
+
+    const timestamps = this._pointTimestamps.length === pagePoints.length
+      ? this._pointTimestamps
+      : undefined;
+
+    const recognized = recognizeShape(pagePoints, timestamps);
+    if (!recognized) return;
+
+    this.applyRecognizedShape(shape, recognized);
+  }
+
+  private applyRecognizedShape(shape: DrawShape, recognized: RecognizedShape): void {
+    if (recognized.kind === 'polyline') {
+      const bb = boundingBox(recognized.vertices);
+      const localVerts = recognized.vertices.map((v) => ({
+        x: v.x - bb.x,
+        y: v.y - bb.y,
+        z: v.z,
+      }));
+      this.editor.store.updateShape(shape.id, {
+        x: bb.x,
+        y: bb.y,
+        props: {
+          ...shape.props,
+          segments: buildPolylineSegments(localVerts, recognized.closed),
+          isClosed: recognized.closed,
+          isComplete: true,
+        },
+      });
+    } else {
+      const shapeX = recognized.cx - recognized.width / 2;
+      const shapeY = recognized.cy - recognized.height / 2;
+      this.editor.store.updateShape(shape.id, {
+        x: shapeX,
+        y: shapeY,
+        props: {
+          ...shape.props,
+          segments: buildEllipseSegments(recognized.width, recognized.height),
+          isClosed: true,
+          isComplete: true,
+        },
+      });
+    }
+
+    this.editor.requestRender();
+
+    const recognitionInfo: RecognitionEntryInfo = {
+      shapeId: shape.id,
+      recognized,
+    };
+
+    this.ctx.transition('pen_recognizing', recognitionInfo as any);
   }
 }

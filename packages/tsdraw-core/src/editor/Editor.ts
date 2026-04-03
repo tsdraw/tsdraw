@@ -17,6 +17,7 @@ import { EraserErasingState } from '../tools/eraser/states/EraserErasingState.js
 import { SelectIdleState } from '../tools/select/states/SelectIdleState.js';
 import { HandIdleState } from '../tools/hand/states/HandIdleState.js';
 import { HandDraggingState } from '../tools/hand/states/HandDraggingState.js';
+import { PenRecognizingState } from '../tools/pen/states/PenRecognizingState.js';
 import type { ShapeId, Shape, DrawShape, ColorStyle, DashStyle, SizeStyle, FillStyle } from '../types.js';
 import type { Vec3 } from '../types.js';
 import { DRAG_DISTANCE_SQUARED } from '../types.js';
@@ -82,6 +83,7 @@ export class Editor {
   private readonly toolStateContext: ToolStateContext;
   private readonly listeners = new Set<EditorListener>();
   private readonly historyListeners = new Set<EditorListener>();
+  private readonly renderCallbacks = new Set<EditorListener>();
   private undoStack: TsdrawDocumentSnapshot[] = [];
   private redoStack: TsdrawDocumentSnapshot[] = [];
   private lastDocumentSnapshot: TsdrawDocumentSnapshot;
@@ -142,7 +144,7 @@ export class Editor {
 
   private getDefaultToolDefinitions(): ToolDefinition[] {
     return [
-      { id: 'pen', initialStateId: PenIdleState.id, stateConstructors: [PenIdleState, PenDrawingState] },
+      { id: 'pen', initialStateId: PenIdleState.id, stateConstructors: [PenIdleState, PenDrawingState, PenRecognizingState] },
       { id: 'square', initialStateId: SquareIdleState.id, stateConstructors: [SquareIdleState, SquareDrawingState] },
       { id: 'circle', initialStateId: CircleIdleState.id, stateConstructors: [CircleIdleState, CircleDrawingState] },
       { id: 'eraser', initialStateId: EraserIdleState.id, stateConstructors: [EraserIdleState, EraserPointingState, EraserErasingState] },
@@ -378,6 +380,15 @@ export class Editor {
     return () => {
       this.historyListeners.delete(listener);
     };
+  }
+
+  onRequestRender(callback: EditorListener): () => void {
+    this.renderCallbacks.add(callback);
+    return () => { this.renderCallbacks.delete(callback); };
+  }
+
+  requestRender(): void {
+    for (const cb of this.renderCallbacks) cb();
   }
 
   // Convert screen coords to page coords

@@ -22,4 +22,7 @@ export interface IEditor {
   setCurrentDrawStyle(partial: Partial<{ color: ColorStyle; dash: DashStyle; fill: FillStyle; size: SizeStyle }>): void;
   setViewport(partial: Partial<Viewport>): void;
   panBy(dx: number, dy: number): void;
+  beginHistoryEntry(): void;
+  endHistoryEntry(): void;
+  requestRender(): void;
 }

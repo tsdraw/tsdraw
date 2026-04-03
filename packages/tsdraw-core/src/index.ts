@@ -30,8 +30,10 @@ export * from './tools/select/selectHelpers.js';
 export * from './tools/hand/HandTool.js';
 export * from './tools/hand/states/HandIdleState.js';
 export * from './tools/hand/states/HandDraggingState.js';
+export * from './tools/pen/states/PenRecognizingState.js';
 
 export * from './utils/pathCodec.js';
 export * from './utils/geometry.js';
 export * from './utils/colors.js';
+export * from './utils/shapeRecognition.js';
 export * from './persistence/snapshots.js';

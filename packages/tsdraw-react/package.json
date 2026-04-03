@@ -1,6 +1,6 @@
 {
   "name": "@tsdraw/react",
-  "version": "0.9.2",
+  "version": "0.9.3",
   "description": "@tsdraw/react - React components and hooks for tsdraw",
   "repository": {
     "type": "git",
