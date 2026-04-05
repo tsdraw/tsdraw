@@ -19,6 +19,11 @@
     inset 0px 0px 0px 1px var(--tsdraw-color-panel-contrast);
   --tsdraw-color-handle-fill: #ffffff;
   --tsdraw-color-tool-dot-outline: rgba(255, 255, 255, 0.4);
+  --tsdraw-color-selection-handle-border: #5b7ef5;
+  --tsdraw-color-vertex-handle-fill: #5b7ef5;
+  --tsdraw-color-vertex-handle-ring: #ffffff;
+  --tsdraw-color-vertex-handle-shadow: rgba(15, 23, 42, 0.42);
+  --tsdraw-color-vertex-handle-shadow-soft: rgba(15, 23, 42, 0.2);
   --tsdraw-color-tool-ring-border: rgba(24, 24, 24, 0.85);
   --tsdraw-color-tool-ring-fill: rgba(24, 24, 24, 0.08);
   --tsdraw-radius: 12px;
@@ -48,6 +53,11 @@
     inset 0px 0px 0px 1px var(--tsdraw-color-panel-contrast);
   --tsdraw-color-handle-fill: #171717;
   --tsdraw-color-tool-dot-outline: rgba(255, 255, 255, 0.2);
+  --tsdraw-color-selection-handle-border: #5b7ef5;
+  --tsdraw-color-vertex-handle-fill: #5b7ef5;
+  --tsdraw-color-vertex-handle-ring: #ffffff;
+  --tsdraw-color-vertex-handle-shadow: rgba(0, 0, 0, 0.58);
+  --tsdraw-color-vertex-handle-shadow-soft: rgba(0, 0, 0, 0.38);
   --tsdraw-color-tool-ring-border: rgba(255, 255, 255, 0.75);
   --tsdraw-color-tool-ring-fill: rgba(255, 255, 255, 0.08);
 }
@@ -304,8 +314,8 @@
 
 .tsdraw-selection-brush {
   position: absolute;
-  border: 1px solid rgba(68, 101, 233, 0.95);
-  background: rgba(68, 101, 233, 0.12);
+  border: 2px solid var(--tsdraw-color-selection-handle-border);
+  background: var(--tsdraw-color-selection-handle-fill);
   pointer-events: none;
   z-index: 90;
 }
@@ -321,7 +331,7 @@
 .tsdraw-selection-bounds {
   position: absolute;
   inset: 0;
-  border: 1px solid #4465e9;
+  border: 2px solid var(--tsdraw-color-selection-handle-border);
   box-shadow: 0 0 0 1px var(--tsdraw-color-selection-contrast) inset;
   pointer-events: none;
   z-index: 1;
@@ -344,12 +354,15 @@
 }
 
 .tsdraw-vertex-handle {
-  width: 8px;
-  height: 8px;
-  border: 1px solid #4465e9;
-  background: var(--tsdraw-color-handle-fill);
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--tsdraw-color-vertex-handle-ring);
+  background: var(--tsdraw-color-vertex-handle-fill);
   border-radius: 50%;
   box-sizing: border-box;
+  box-shadow:
+    0 2px 4px var(--tsdraw-color-vertex-handle-shadow),
+    0 6px 14px var(--tsdraw-color-vertex-handle-shadow-soft);
 }
 
 .tsdraw-selection-handle::after {
@@ -357,10 +370,10 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   transform: translate(-50%, -50%);
-  border: 1px solid #4465e9;
+  border: 2px solid var(--tsdraw-color-selection-handle-border);
   background: var(--tsdraw-color-handle-fill);
   border-radius: 2px;
   pointer-events: none;
@@ -377,7 +390,7 @@
   top: 0;
   width: 0;
   height: 15px;
-  border-left: 1px solid #4465e9;
+  border-left: 2px solid var(--tsdraw-color-selection-handle-border);
   transform: translate(-50%, -100%);
   pointer-events: none;
   z-index: 1;
@@ -406,10 +419,10 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   transform: translate(-50%, -50%);
-  border: 1px solid #4465e9;
+  border: 2px solid var(--tsdraw-color-selection-handle-border);
   background: var(--tsdraw-color-handle-fill);
   border-radius: 50%;
   pointer-events: none;

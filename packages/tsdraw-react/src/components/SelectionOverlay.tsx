@@ -45,6 +45,7 @@ export function SelectionOverlay({
             width: selectionBounds.width,
             height: selectionBounds.height,
             transform: `rotate(${selectionRotationDeg}deg)`,
+            transformOrigin: 'center center',
           }}
         >
           <div className="tsdraw-selection-bounds" />
