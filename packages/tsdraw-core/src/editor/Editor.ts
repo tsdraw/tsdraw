@@ -5,6 +5,7 @@ import { CanvasRenderer } from '../canvas/renderer.js';
 import { InputManager } from '../input/inputManager.js';
 import type { ToolStateContext } from '../store/stateNode.js';
 import { ToolManager, type ToolDefinition, type ToolId } from '../tools/toolManager.js';
+import { decodePoints } from '../utils/pathCodec.js';
 import { PenIdleState } from '../tools/pen/states/PenIdleState.js';
 import { PenDrawingState } from '../tools/pen/states/PenDrawingState.js';
 import { SquareIdleState } from '../tools/square/states/SquareIdleState.js';
@@ -20,6 +21,7 @@ import { HandDraggingState } from '../tools/hand/states/HandDraggingState.js';
 import { PenRecognizingState } from '../tools/pen/states/PenRecognizingState.js';
 import type { ShapeId, Shape, DrawShape, ColorStyle, DashStyle, SizeStyle, FillStyle } from '../types.js';
 import type { Vec3 } from '../types.js';
+import type { AutoShapeOptions } from '../utils/shapeRecognition.js';
 import { DRAG_DISTANCE_SQUARED } from '../types.js';
 import {
   documentSnapshotToRecords,
@@ -35,6 +37,7 @@ export interface EditorOptions {
   toolDefinitions?: ToolDefinition[];
   initialToolId?: ToolId;
   zoomRange?: ZoomRange;
+  autoShape?: AutoShapeOptions;
 }
 
 type EditorListener = () => void;
@@ -73,6 +76,7 @@ export class Editor {
   readonly renderer: CanvasRenderer = new CanvasRenderer();
   viewport: Viewport = createViewport();
   readonly options: { dragDistanceSquared: number; zoomRange?: ZoomRange };
+  autoShape: AutoShapeOptions;
   // Default draw style
   private drawStyle: { color: ColorStyle; dash: DashStyle; fill: FillStyle; size: SizeStyle } = {
     color: 'black',
@@ -95,6 +99,7 @@ export class Editor {
   // Creates a new editor instance with the given options (with defaults if not provided)
   constructor(opts: EditorOptions = {}) {
     this.options = { dragDistanceSquared: opts.dragDistanceSquared ?? DRAG_DISTANCE_SQUARED, zoomRange: opts.zoomRange };
+    this.autoShape = { enabled: true, ...opts.autoShape };
     this.lastDocumentSnapshot = this.getDocumentSnapshot();
     this.store.listen(() => {
       this.captureDocumentHistory();
@@ -185,6 +190,29 @@ export class Editor {
   getErasingShapeIds() { return this.store.getErasingShapeIds(); }
   setErasingShapes(ids: ShapeId[]) { this.store.setErasingShapes(ids); }
 
+  // Vertex endpoints from all completed shapes for snapping the nodes
+  getShapeNodes(excludeId?: ShapeId): Vec3[] {
+    const nodes: Vec3[] = [];
+    const seen = new Set<string>();
+    for (const shape of this.getCurrentPageShapes()) {
+      const draw = shape as DrawShape;
+      if (draw.type !== 'draw' || !draw.props.isComplete) continue;
+      if (excludeId && draw.id === excludeId) continue;
+      for (const seg of draw.props.segments) {
+        if (seg.type !== 'straight') continue;
+        const pts = decodePoints(seg.path);
+        for (const pt of [pts[0]!, pts[pts.length - 1]!]) {
+          if (!pt) continue;
+          const key = `${Math.round(draw.x + pt.x)},${Math.round(draw.y + pt.y)}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          nodes.push({ x: draw.x + pt.x, y: draw.y + pt.y, z: 0.5 });
+        }
+      }
+    }
+    return nodes;
+  }
+
   setCurrentTool(id: ToolId) { this.tools.setCurrentTool(id); this.emitChange(); }
   getCurrentToolId(): ToolId { return this.tools.getCurrentToolId(); }
 
@@ -192,6 +220,10 @@ export class Editor {
   setCurrentDrawStyle(partial: Partial<{ color: ColorStyle; dash: DashStyle; fill: FillStyle; size: SizeStyle }>) {
     this.drawStyle = { ...this.drawStyle, ...partial };
     this.emitChange();
+  }
+
+  setAutoShape(config: Partial<AutoShapeOptions>) {
+    this.autoShape = { ...this.autoShape, ...config };
   }
 
   setViewport(partial: Partial<Viewport>) {

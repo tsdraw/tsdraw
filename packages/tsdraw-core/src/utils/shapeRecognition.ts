@@ -7,6 +7,7 @@ export const RDP_EPSILON = 0.045; // RDP tolerance vs bbox diagonal (higher -> f
 export const VERTEX_MERGE_DIST = 0.05; // merge adjacent verts closer than this x diagonal
 export const CLOSURE_PATH_RATIO = 0.10; // max start-end gap vs stroke length
 export const CLOSURE_DIAGONAL_RATIO = 0.18; // max start-end gap vs bbox diagonal
+export const CLOSURE_AUTO_POLYGON_RATIO = 0.35; // loose diagonal ratio for auto closing polygon
 export const ELLIPSE_FIT_TOLERANCE = 0.35; // max mean |(x/a)²+(y/b)²−1|
 export const RECT_ANGLE_TOLERANCE = Math.PI * 0.22; // max deviation from 90° per corner
 export const MIN_PATH_LENGTH = 4; // min arc length (px) before recognition
@@ -41,70 +42,137 @@ export interface RecognitionEntryInfo {
   recognized: RecognizedShape;
 }
 
+export type AutoShapeKind = 'polyline' | 'polygon' | 'rectangle' | 'ellipse';
+
+export interface AutoShapeThresholds {
+  rdpEpsilon: number;
+  vertexMergeDist: number;
+  closurePathRatio: number;
+  closureDiagonalRatio: number;
+  closureAutoPolygonRatio: number; // looser diagonal threshold for auto-closing unclosed polygons
+  ellipseFitTolerance: number;
+  rectAngleTolerance: number;
+  minPathLength: number;
+  speedDipRatio: number;
+  speedDipRadius: number;
+  sharpAngleLimit: number;
+  speedVarianceThreshold: number;
+}
+
+export const DEFAULT_AUTO_SHAPE_THRESHOLDS: Readonly<AutoShapeThresholds> = {
+  rdpEpsilon: RDP_EPSILON,
+  vertexMergeDist: VERTEX_MERGE_DIST,
+  closurePathRatio: CLOSURE_PATH_RATIO,
+  closureDiagonalRatio: CLOSURE_DIAGONAL_RATIO,
+  closureAutoPolygonRatio: CLOSURE_AUTO_POLYGON_RATIO,
+  ellipseFitTolerance: ELLIPSE_FIT_TOLERANCE,
+  rectAngleTolerance: RECT_ANGLE_TOLERANCE,
+  minPathLength: MIN_PATH_LENGTH,
+  speedDipRatio: SPEED_DIP_RATIO,
+  speedDipRadius: SPEED_DIP_RADIUS,
+  sharpAngleLimit: SHARP_ANGLE_LIMIT,
+  speedVarianceThreshold: SPEED_VARIANCE_THRESHOLD,
+};
+
+export interface AutoShapeOptions {
+  enabled?: boolean; // default true
+  whitelist?: AutoShapeKind[]; // undefined = all shapes
+  thresholds?: Partial<AutoShapeThresholds>;
+}
+
+function resolveThresholds(overrides?: Partial<AutoShapeThresholds>): AutoShapeThresholds {
+  if (!overrides) return DEFAULT_AUTO_SHAPE_THRESHOLDS as AutoShapeThresholds;
+  return { ...DEFAULT_AUTO_SHAPE_THRESHOLDS, ...overrides };
+}
+
 // Figure out what shape the stroke is and return a RecognizedShape if it's a shape
-export function recognizeShape(points: Vec3[], timestamps?: number[]): RecognizedShape | null {
+export function recognizeShape(
+  points: Vec3[],
+  timestamps?: number[],
+  config?: AutoShapeOptions,
+): RecognizedShape | null {
   if (points.length < 3) return null;
+  const t = resolveThresholds(config?.thresholds);
+  const allowed = config?.whitelist; // undefined = all shapes
 
   const totalLen = pathLength(points);
-  if (totalLen < MIN_PATH_LENGTH) return null;
+  if (totalLen < t.minPathLength) return null;
 
   const bb = boundingBox(points);
   const diagonal = Math.hypot(bb.width, bb.height);
   if (diagonal < 2) return null;
 
   const closingGap = dist(points[0]!, points[points.length - 1]!); // closure on raw endpoints
-  const isClosed = closingGap < totalLen * CLOSURE_PATH_RATIO && closingGap < diagonal * CLOSURE_DIAGONAL_RATIO;
+  const isClosed = closingGap < totalLen * t.closurePathRatio && closingGap < diagonal * t.closureDiagonalRatio;
 
   if (isClosed) {
-    const ellipse = tryEllipse(points, bb); // raw points, no RDP verts yet
-    if (ellipse) return ellipse;
+    const ellipse = tryEllipse(points, bb, t.ellipseFitTolerance); // raw points, no RDP verts yet
+    if (ellipse && (!allowed || allowed.includes('ellipse'))) return ellipse;
   }
 
-  const epsilon = diagonal * RDP_EPSILON; // RDP, optionally refined by speed below
+  const epsilon = diagonal * t.rdpEpsilon; // RDP, optionally refined by speed below
   const rdpIndices = rdpSimplify(points, epsilon);
 
   const canRefineWithSpeed = timestamps != null && timestamps.length === points.length && points.length > 6;
-  const keyIndices = canRefineWithSpeed ? refineVerticesWithSpeed(rdpIndices, points, timestamps!) : rdpIndices;
+  const keyIndices = canRefineWithSpeed ? refineVerticesWithSpeed(rdpIndices, points, timestamps!, t) : rdpIndices;
 
   const rawVertices = keyIndices.map((i) => points[i]!);
-  const vertices = filterCloseVertices(rawVertices, diagonal * VERTEX_MERGE_DIST);
+  const vertices = filterCloseVertices(rawVertices, diagonal * t.vertexMergeDist);
   if (vertices.length < 2) return null;
 
   const cursorPoint = points[points.length - 1]!;
 
+  // Close shapes user drew start -> end strictly
   if (isClosed && vertices.length >= 3) {
     const merged = snapClosedVertices(vertices);
-    const rect = tryRectangleSnap(merged);
+    return returnClosedPolygon(merged, cursorPoint, allowed, t);
+  }
+
+  // Auto close endpoints within loose polygon threshold
+  const canAutoClose = (!allowed || allowed.includes('polygon')) && vertices.length >= 3 && closingGap < diagonal * t.closureAutoPolygonRatio;
+  if (canAutoClose) { return returnClosedPolygon(vertices, cursorPoint, allowed, t); }
+
+  if (allowed && !allowed.includes('polyline')) return null;
+  return { kind: 'polyline', vertices, closed: false, activeVertexIdx: nearestPointIndex(vertices, cursorPoint) };
+}
+
+function returnClosedPolygon(
+  vertices: Vec3[],
+  cursorPoint: Vec3,
+  allowed: AutoShapeKind[] | undefined,
+  t: AutoShapeThresholds,
+): RecognizedShape | null {
+  if (!allowed || allowed.includes('rectangle')) {
+    const rect = tryRectangleSnap(vertices, t.rectAngleTolerance);
     if (rect) {
       const activeIdx = nearestPointIndex(rect, cursorPoint);
       return { kind: 'polyline', vertices: rect, closed: true, activeVertexIdx: activeIdx, rectangleAnchorIdx: (activeIdx + 2) % 4 };
     }
-    return { kind: 'polyline', vertices: merged, closed: true, activeVertexIdx: nearestPointIndex(merged, cursorPoint) };
   }
-
-  return { kind: 'polyline', vertices, closed: false, activeVertexIdx: nearestPointIndex(vertices, cursorPoint) };
+  if (allowed && !allowed.includes('polygon')) return null;
+  return { kind: 'polyline', vertices, closed: true, activeVertexIdx: nearestPointIndex(vertices, cursorPoint) };
 }
 
 // Speed vertex refinements
 
 // Removes RDP verts near smooth fast strokes unless its a sharp turn, stopping it from turning into a polygon
-function refineVerticesWithSpeed(rdpIndices: number[], points: Vec3[], timestamps: number[]): number[] {
+function refineVerticesWithSpeed(rdpIndices: number[], points: Vec3[], timestamps: number[], t: AutoShapeThresholds): number[] {
   if (rdpIndices.length <= 2) return rdpIndices;
 
   const speeds = computeSpeeds(points, timestamps);
-  const analysis = analyzeSpeedProfile(speeds, points.length);
+  const analysis = analyzeSpeedProfile(speeds, points.length, t.speedVarianceThreshold, t.speedDipRatio);
   if (!analysis) return rdpIndices;
   const { dipSet } = analysis;
 
   const refined: number[] = [rdpIndices[0]!];
   for (let k = 1; k < rdpIndices.length - 1; k++) {
     const idx = rdpIndices[k]!;
-    if (hasNearbyDip(idx, dipSet, points.length)) {
+    if (hasNearbyDip(idx, dipSet, points.length, t.speedDipRadius)) {
       refined.push(idx);
       continue;
     }
     const angle = angleBetween(points[idx]!, points[rdpIndices[k - 1]!]!, points[rdpIndices[k + 1]!]!); // no dip: corner only if sharp
-    if (angle < SHARP_ANGLE_LIMIT) {
+    if (angle < t.sharpAngleLimit) {
       refined.push(idx);
     }
   }
@@ -121,7 +189,7 @@ function computeSpeeds(points: Vec3[], timestamps: number[]): number[] {
   return speeds;
 }
 
-function analyzeSpeedProfile(speeds: number[], totalPoints: number): { dipSet: Set<number> } | null { // trim, variance, dips; null if uniform
+function analyzeSpeedProfile(speeds: number[], totalPoints: number, varianceThreshold: number, dipRatio: number): { dipSet: Set<number> } | null { // trim, variance, dips; null if uniform
   const trimStart = Math.max(1, Math.floor(totalPoints * 0.1));
   const trimEnd = Math.min(totalPoints - 1, Math.ceil(totalPoints * 0.9));
   if (trimEnd - trimStart < 5) return null;
@@ -135,11 +203,11 @@ function analyzeSpeedProfile(speeds: number[], totalPoints: number): { dipSet: S
   const mean = trimmed.reduce((s, v) => s + v, 0) / trimmed.length; // coefficient of variation gate
   if (mean < 0.001) return null;
   const variance = trimmed.reduce((s, v) => s + (v - mean) ** 2, 0) / trimmed.length;
-  if (Math.sqrt(variance) / mean < SPEED_VARIANCE_THRESHOLD) return null;
+  if (Math.sqrt(variance) / mean < varianceThreshold) return null;
 
   trimmed.sort((a, b) => a - b);
   const median = trimmed[Math.floor(trimmed.length / 2)]!;
-  const threshold = median * SPEED_DIP_RATIO;
+  const threshold = median * dipRatio;
 
   const dipSet = new Set<number>();
   for (let i = trimStart; i < trimEnd; i++) {
@@ -148,9 +216,9 @@ function analyzeSpeedProfile(speeds: number[], totalPoints: number): { dipSet: S
   return dipSet.size > 0 ? { dipSet } : null;
 }
 
-function hasNearbyDip(idx: number, dipSet: Set<number>, totalPoints: number): boolean {
-  const lo = Math.max(0, idx - SPEED_DIP_RADIUS);
-  const hi = Math.min(totalPoints - 1, idx + SPEED_DIP_RADIUS);
+function hasNearbyDip(idx: number, dipSet: Set<number>, totalPoints: number, radius: number): boolean {
+  const lo = Math.max(0, idx - radius);
+  const hi = Math.min(totalPoints - 1, idx + radius);
   for (let j = lo; j <= hi; j++) {
     if (dipSet.has(j)) return true;
   }
@@ -177,13 +245,13 @@ function snapClosedVertices(vertices: Vec3[]): Vec3[] { // drop duplicate last; 
   return merged;
 }
 
-function tryRectangleSnap(vertices: Vec3[]): Vec3[] | null { // ≈90° corners -> axis-aligned bbox quad
+function tryRectangleSnap(vertices: Vec3[], angleTolerance: number): Vec3[] | null { // ≈90° corners -> axis-aligned bbox quad
   if (vertices.length !== 4) return null;
   const RIGHT = Math.PI / 2;
   let rightCount = 0;
   for (let i = 0; i < 4; i++) {
     const angle = angleBetween(vertices[i]!, vertices[(i + 3) % 4]!, vertices[(i + 1) % 4]!);
-    if (Math.abs(angle - RIGHT) < RECT_ANGLE_TOLERANCE) rightCount++;
+    if (Math.abs(angle - RIGHT) < angleTolerance) rightCount++;
   }
   if (rightCount < 3) return null;
   const bb = boundingBox(vertices);
@@ -197,7 +265,8 @@ function tryRectangleSnap(vertices: Vec3[]): Vec3[] | null { // ≈90° corners 
 
 function tryEllipse(
   points: Vec3[],
-  bb: { x: number; y: number; width: number; height: number }
+  bb: { x: number; y: number; width: number; height: number },
+  fitTolerance: number,
 ): RecognizedEllipse | null { // normalized ellipse equation fit vs bbox
   const w = Math.max(bb.width, 1);
   const h = Math.max(bb.height, 1);
@@ -213,6 +282,6 @@ function tryEllipse(
     const dy = p.y - cy;
     totalDeviation += Math.abs((dx * dx) / a2 + (dy * dy) / b2 - 1);
   }
-  if (totalDeviation / points.length > ELLIPSE_FIT_TOLERANCE) return null;
+  if (totalDeviation / points.length > fitTolerance) return null;
   return { kind: 'ellipse', cx, cy, width: w, height: h };
 }

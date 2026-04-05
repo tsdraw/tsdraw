@@ -27,7 +27,7 @@ import {
   type TsdrawEditorSnapshot,
   type TsdrawBackgroundOptions,
 } from '@tsdraw/core';
-import type { ColorStyle, DashStyle, FillStyle, ShapeId, SizeStyle, SelectionBounds, TsdrawDocumentSnapshot } from '@tsdraw/core';
+import type { ColorStyle, DashStyle, FillStyle, ShapeId, SizeStyle, SelectionBounds, TsdrawDocumentSnapshot, AutoShapeOptions } from '@tsdraw/core';
 import { getCanvasCursor } from './cursor.js';
 import { createTouchInteractionController } from './touchInteractions.js';
 import { handleKeyboardShortcutKeyDown, handleKeyboardShortcutKeyUp, resolveToolShortcuts } from './keyboardShortcuts.js';
@@ -80,6 +80,7 @@ export interface UseTsdrawCanvasControllerOptions {
   touchOptions?: TsdrawTouchOptions;
   keyboardShortcuts?: TsdrawKeyboardShortcutOptions;
   penOptions?: TsdrawPenOptions;
+  autoShape?: boolean | AutoShapeOptions;
   background?: TsdrawBackgroundOptions;
   readOnly?: boolean;
   autoFocus?: boolean;
@@ -145,6 +146,12 @@ function getHandlePagePoint(bounds: SelectionBounds, handle: ResizeHandle): { x:
   }
 }
 
+function resolveAutoShapeOption(input?: boolean | AutoShapeOptions): AutoShapeOptions {
+  if (input === false) return { enabled: false };
+  if (input === true || input == null) return { enabled: true };
+  return { enabled: input.enabled ?? true, ...input };
+}
+
 const ZOOM_WHEEL_CAP = 10;
 
 const VIEW_ONLY_TOOLS = new Set<ToolId>(['select', 'hand']);
@@ -158,6 +165,7 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
   const touchOptionsRef = useRef(options.touchOptions);
   const keyboardShortcutsRef = useRef(options.keyboardShortcuts);
   const penOptionsRef = useRef(options.penOptions);
+  const autoShapeRef = useRef(options.autoShape);
   const backgroundRef = useRef(options.background);
   const readOnlyRef = useRef(options.readOnly ?? false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -241,6 +249,11 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
   useEffect(() => { touchOptionsRef.current = options.touchOptions; }, [options.touchOptions]);
   useEffect(() => { keyboardShortcutsRef.current = options.keyboardShortcuts; }, [options.keyboardShortcuts]);
   useEffect(() => { penOptionsRef.current = options.penOptions; }, [options.penOptions]);
+  useEffect(() => {
+    autoShapeRef.current = options.autoShape;
+    const editor = editorRef.current;
+    if (editor) editor.setAutoShape(resolveAutoShapeOption(options.autoShape));
+  }, [options.autoShape]);
   useEffect(() => { backgroundRef.current = options.background; }, [options.background]);
   useEffect(() => { readOnlyRef.current = options.readOnly ?? false; }, [options.readOnly]);
 
@@ -397,6 +410,7 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
       toolDefinitions: options.toolDefinitions,
       initialToolId: initialTool,
       zoomRange: cameraOpts?.zoomRange,
+      autoShape: resolveAutoShapeOption(autoShapeRef.current),
     });
     editor.renderer.setTheme(options.theme ?? 'light');
     if (!editor.tools.hasTool(initialTool)) {

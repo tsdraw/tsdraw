@@ -6,7 +6,7 @@ import {
 import type { DrawShape, DrawSegment, Vec3 } from '../../../types.js';
 import { STROKE_WIDTHS, MAX_POINTS_PER_SHAPE } from '../../../types.js';
 import { encodePoints, decodePoints, decodeFirstPoint, decodeLastPoint } from '../../../utils/pathCodec.js';
-import { dist, sqDist, withinRadius, toFixed, roundPt, lerpPath, tail, quantizeAngle, rotateAround, boundingBox } from '../../../utils/vec.js';
+import { dist, sqDist, withinRadius, lerpPath, tail, quantizeAngle, rotateAround, boundingBox } from '../../../utils/vec.js';
 import { recognizeShape, type RecognizedShape, type RecognitionEntryInfo } from '../../../utils/shapeRecognition.js';
 import { buildPolylineSegments, buildEllipseSegments } from '../../geometric/geometricShapeHelpers.js';
 
@@ -160,7 +160,7 @@ export class PenDrawingState extends StateNode {
     const z = this._startInfo?.point?.z ?? 0.5;
     this._isPenDevice = penActive;
     this._hasPressure = penActive || z !== 0.5;
-    const pressure = this._hasPressure ? toFixed(z * 1.25) : 0.5;
+    const pressure = this._hasPressure ? z * 1.25 : 0.5;
     this._phase = inputs.getShiftKey() ? 'straight' : 'free';
     this._extending = false;
     this._lastSample = { ...origin };
@@ -177,7 +177,7 @@ export class PenDrawingState extends StateNode {
       if (!prevEnd) { this.spawnShape(origin, pressure); return; }
       this._extending = true;
       const local = this.editor.getPointInShapeSpace(existing, origin);
-      const localPt: Vec3 = { x: toFixed(local.x), y: toFixed(local.y), z: pressure };
+      const localPt: Vec3 = { x: local.x, y: local.y, z: pressure };
       const newSeg: DrawSegment = {
         type: 'straight',
         path: encodePoints([
@@ -210,7 +210,8 @@ export class PenDrawingState extends StateNode {
 
   // Create a new shape, when we need a new drawing shape 
   private spawnShape(originPt: Vec3, pressure: number): void {
-    this._anchor = { ...originPt };
+    const origin = originPt;
+    this._anchor = { ...origin };
     const drawStyle = this.editor.getCurrentDrawStyle();
     const id = this.editor.createShapeId();
     const firstPt: Vec3 = { x: 0, y: 0, z: pressure };
@@ -219,8 +220,8 @@ export class PenDrawingState extends StateNode {
     this.editor.createShape({
       id,
       type: 'draw',
-      x: originPt.x,
-      y: originPt.y,
+      x: origin.x,
+      y: origin.y,
       props: {
         color: drawStyle.color,
         dash: drawStyle.dash,
@@ -267,9 +268,9 @@ export class PenDrawingState extends StateNode {
 
     const local = this.editor.getPointInShapeSpace(shape, curPt);
     const pressure = this._hasPressure
-      ? toFixed((curPt.z ?? 0.5) * 1.25)
+      ? (curPt.z ?? 0.5) * 1.25
       : 0.5;
-    const pt: Vec3 = { x: toFixed(local.x), y: toFixed(local.y), z: pressure };
+    const pt: Vec3 = { x: local.x, y: local.y, z: pressure };
 
     // Straight: straight lines, eg. holding shift
     // Free: smooth drawings so drawings doesnt look geometrical
@@ -287,7 +288,7 @@ export class PenDrawingState extends StateNode {
         const prevEnd = decodeLastPoint(prevSeg.path);
         if (!prevEnd) break;
         const anchorLocal = this.editor.getPointInShapeSpace(shape, this._anchor);
-        const anchorPt = roundPt(anchorLocal);
+        const anchorPt = anchorLocal;
         const seg: DrawSegment = {
           type: 'straight',
           path: encodePoints([prevEnd, { ...anchorPt, z: pressure }]),
@@ -359,7 +360,7 @@ export class PenDrawingState extends StateNode {
           pagePt = { ...current };
         }
         const localPt = this.editor.getPointInShapeSpace(shape, pagePt);
-        const fixedPt = roundPt(localPt);
+        const fixedPt = localPt;
         const segStart = decodeFirstPoint(lastSeg.path);
         if (segStart) {
           this._pathLen += dist(segStart, fixedPt);
@@ -421,7 +422,7 @@ export class PenDrawingState extends StateNode {
           const firstPt: Vec3 = {
             x: 0,
             y: 0,
-            z: this._hasPressure ? toFixed((curPage.z ?? 0.5) * 1.25) : 0.5,
+            z: this._hasPressure ? (curPage.z ?? 0.5) * 1.25 : 0.5,
           };
           this._activePts = [firstPt];
           this._pointTimestamps = [performance.now()];
@@ -473,6 +474,7 @@ export class PenDrawingState extends StateNode {
   }
 
   private resetDwellTimer(): void {
+    if (this.editor.autoShape?.enabled === false) return;
     this.clearDwellTimer();
     this._dwellTimer = setTimeout(() => {
       this._dwellTimer = null;
@@ -494,7 +496,7 @@ export class PenDrawingState extends StateNode {
     const shape = this.editor.getShape(target.id) as DrawShape | undefined;
     if (!shape) return;
 
-    const pagePoints = this._activePts.map((pt) => ({
+    const pagePoints: Vec3[] = this._activePts.map((pt) => ({
       x: pt.x + shape.x,
       y: pt.y + shape.y,
       z: pt.z,
@@ -505,7 +507,7 @@ export class PenDrawingState extends StateNode {
       ? this._pointTimestamps
       : undefined;
 
-    const recognized = recognizeShape(pagePoints, timestamps);
+    const recognized = recognizeShape(pagePoints, timestamps, this.editor.autoShape);
     if (!recognized) return;
 
     this.applyRecognizedShape(shape, recognized);

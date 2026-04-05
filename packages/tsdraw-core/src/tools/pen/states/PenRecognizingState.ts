@@ -2,8 +2,10 @@ import { StateNode, type ToolKeyInfo, type ToolStateTransitionInfo } from '../..
 import type { DrawShape, Vec3, ShapeId } from '../../../types.js';
 import type { RecognizedShape, RecognitionEntryInfo } from '../../../utils/shapeRecognition.js';
 export type { RecognitionEntryInfo } from '../../../utils/shapeRecognition.js';
-import { boundingBox, nearestPointIndex } from '../../../utils/vec.js';
+import { boundingBox, nearestPointIndex, snapToNearestNode } from '../../../utils/vec.js';
 import { buildPolylineSegments, buildEllipseSegments } from '../../geometric/geometricShapeHelpers.js';
+
+const NODE_SNAP_RADIUS_PX = 20;
 
 // Active after shape recognition snaps a freehand stroke to a geometric shape.
 // The active vertex follows the mouse cursor while others are fixed.
@@ -90,12 +92,23 @@ export class PenRecognizingState extends StateNode {
     this.ctx.transition('pen_idle');
   }
 
+  // Other shape nodes plus this ones's (except dragged node itself)
+  private snapCandidates(excludeVertexIndex: number): Vec3[] {
+    const onThisShape = this.polyVertices
+      .filter((_, i) => i !== excludeVertexIndex)
+      .map((v) => ({ x: v.x, y: v.y, z: v.z ?? 0.5 }));
+    return [...onThisShape, ...this.editor.getShapeNodes(this.shapeId)];
+  }
+
   private resizePolyline(cursorPage: Vec3): void {
     const existingProps = this.getActiveProps();
     if (!existingProps) return;
     if (this.activeIdx < 0 || this.activeIdx >= this.polyVertices.length) return;
 
-    this.polyVertices[this.activeIdx] = { x: cursorPage.x, y: cursorPage.y, z: 0.5 };
+    const snapRadius = NODE_SNAP_RADIUS_PX / this.editor.getZoomLevel();
+    const nodes = this.snapCandidates(this.activeIdx);
+    const target = snapToNearestNode(cursorPage, nodes, snapRadius) ?? { x: cursorPage.x, y: cursorPage.y, z: 0.5 };
+    this.polyVertices[this.activeIdx] = target;
 
     this.applyPolylineToShape(existingProps);
   }
@@ -107,11 +120,16 @@ export class PenRecognizingState extends StateNode {
     if (!existingProps) return;
     if (this.rectAnchorIdx < 0 || this.rectAnchorIdx >= this.polyVertices.length) return;
 
+    const draggedIdx = nearestPointIndex(this.polyVertices, cursorPage);
+    const snapRadius = NODE_SNAP_RADIUS_PX / this.editor.getZoomLevel();
+    const nodes = this.snapCandidates(draggedIdx);
+    const effectiveCursor = snapToNearestNode(cursorPage, nodes, snapRadius) ?? cursorPage;
+
     const anchor = this.polyVertices[this.rectAnchorIdx]!;
-    const minX = Math.min(anchor.x, cursorPage.x);
-    const minY = Math.min(anchor.y, cursorPage.y);
-    const maxX = Math.max(anchor.x, cursorPage.x);
-    const maxY = Math.max(anchor.y, cursorPage.y);
+    const minX = Math.min(anchor.x, effectiveCursor.x);
+    const minY = Math.min(anchor.y, effectiveCursor.y);
+    const maxX = Math.max(anchor.x, effectiveCursor.x);
+    const maxY = Math.max(anchor.y, effectiveCursor.y);
 
     this.polyVertices = [
       { x: minX, y: minY, z: 0.5 },

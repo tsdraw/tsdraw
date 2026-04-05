@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { dist, sqDist, withinRadius, toFixed, lerpPath, tail, quantizeAngle, rotateAround } from './vec.js';
+import { dist, sqDist, withinRadius, lerpPath, tail, quantizeAngle, rotateAround } from './vec.js';
 
 describe('vec', () => {
   it('dist', () => {
@@ -11,9 +11,6 @@ describe('vec', () => {
   it('withinRadius', () => {
     expect(withinRadius({ x: 0, y: 0 }, { x: 2, y: 0 }, 3)).toBe(true);
     expect(withinRadius({ x: 0, y: 0 }, { x: 10, y: 0 }, 3)).toBe(false);
-  });
-  it('toFixed', () => {
-    expect(toFixed(1.234)).toBe(1.23);
   });
   it('lerpPath', () => {
     const pts = lerpPath({ x: 0, y: 0 }, { x: 10, y: 0 }, 2);

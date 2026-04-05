@@ -1,6 +1,6 @@
 import { createRoot } from 'react-dom/client';
 import { useCallback, useRef, useState, useMemo, type MutableRefObject } from 'react';
-import { Tsdraw, type TsdrawCustomTool, type TsdrawCustomElement } from '@tsdraw/react';
+import { Tsdraw, type TsdrawCustomTool, type TsdrawCustomElement, type AutoShapeKind, type AutoShapeOptions } from '@tsdraw/react';
 import { DEFAULT_COLORS, type ColorStyle, type DashStyle, type SizeStyle } from '@tsdraw/core';
 import Confetti from 'react-confetti-boom';
 import { IconStar, IconStarFilled, IconMoodSmile } from '@tabler/icons-react';
@@ -73,9 +73,37 @@ function EmojiPickerPart({
   );
 }
 
+const ALL_SHAPE_KINDS: AutoShapeKind[] = ['polyline', 'polygon', 'rectangle', 'ellipse'];
+
+const demoAutoShapeThresholds: NonNullable<AutoShapeOptions['thresholds']> = {
+  rdpEpsilon: 0.06,
+  closureDiagonalRatio: 0.22,
+  ellipseFitTolerance: 0.28,
+  rectAngleTolerance: Math.PI * 0.26,
+  minPathLength: 6,
+};
+
 export function App() {
   const editorRef = useRef<any>(null);
   const selectedEmojiRef = useRef(defaultEmoji);
+  const [autoShapeEnabled, setAutoShapeEnabled] = useState(true);
+  const [autoShapeWhitelist, setAutoShapeWhitelist] = useState<AutoShapeKind[]>([...ALL_SHAPE_KINDS]);
+
+  const autoShapeConfig = useMemo<AutoShapeOptions>(
+    () => ({
+      enabled: autoShapeEnabled,
+      whitelist: autoShapeWhitelist.length === ALL_SHAPE_KINDS.length ? undefined : autoShapeWhitelist,
+      thresholds: demoAutoShapeThresholds,
+    }),
+    [autoShapeEnabled, autoShapeWhitelist],
+  );
+
+  const toggleWhitelistKind = useCallback((kind: AutoShapeKind) => {
+    setAutoShapeWhitelist((prev) => {
+      if (prev.includes(kind)) return prev.filter((k) => k !== kind);
+      return [...prev, kind];
+    });
+  }, []);
 
   const handleEmojiSelect = useCallback((nextEmoji: string) => {
     selectedEmojiRef.current = nextEmoji;
@@ -131,6 +159,36 @@ export function App() {
     ),
   };
 
+  const autoShapePanelElement = useMemo<TsdrawCustomElement>(
+    () => ({
+      id: 'autoshape-panel',
+      placement: { anchor: 'bottom-left', edgeOffset: 18 },
+      render: () => (
+        <div className="tsdraw-component" style={{ padding: 8 }}>
+          <label style={{ color: 'var(--tsdraw-color-text)', fontWeight: 'bold' }}>
+            <input type="checkbox" checked={autoShapeEnabled} onChange={(e) => setAutoShapeEnabled(e.target.checked)} />
+            Auto-shape
+          </label>
+          {autoShapeEnabled && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
+              {ALL_SHAPE_KINDS.map((kind) => (
+                <label key={kind} style={{ color: 'var(--tsdraw-color-text)' }}>
+                  <input
+                    type="checkbox"
+                    checked={autoShapeWhitelist.includes(kind)}
+                    onChange={() => toggleWhitelistKind(kind)}
+                  />
+                  {kind}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      ),
+    }),
+    [autoShapeEnabled, autoShapeWhitelist, toggleWhitelistKind]
+  );
+
   const handleMount = useCallback((api: any) => {
     triggerConfetti();
 
@@ -169,8 +227,9 @@ export function App() {
         persistenceKey="ts-demo"
         customTools={[wavyTool, emojiTool]}
         initialToolId="pen"
+        autoShape={autoShapeConfig}
         uiOptions={{
-          toolbar: { // top-left, bottom-center, center-right, left-center, ... (it can be any valid anchor)
+          toolbar: {
             placement: { anchor: 'top-center', edgeOffset: 18, style: { border: '1px solid var(--tsdraw-color-selected)' } },
             parts: [['undo', 'redo'], ['select', 'hand', 'pen', 'square', 'eraser', 'wavy', 'emoji']],
             draggable: true,
@@ -181,11 +240,11 @@ export function App() {
             placement: { anchor: 'top-right', edgeOffset: 18 },
             hide: false,
           },
-          customElements: [confettiButton, randomStyleButton],
+          customElements: [confettiButton, randomStyleButton, autoShapePanelElement],
         }}
         background={{
           type: 'dots',
-          color: '#000000',
+          color: '#AAAAAA',
           colorDark: '#808080',
           spacing: 25,
           size: 1,

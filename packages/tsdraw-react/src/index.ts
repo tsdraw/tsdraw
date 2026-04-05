@@ -36,4 +36,7 @@ export type {
   TsdrawBackgroundPreset,
   TsdrawBackgroundCustom,
   TsdrawBackgroundType,
+  AutoShapeOptions,
+  AutoShapeKind,
+  AutoShapeThresholds,
 } from '@tsdraw/core';

@@ -14,24 +14,16 @@ export function withinRadius(a: Vec3, b: Vec3, r: number): boolean {
   return dist(a, b) <= r;
 }
 
-export function toFixed(n: number, digits = 2): number {
-  return Number(Number.prototype.toFixed.call(n, digits));
-}
-
-export function roundPt(p: Vec3): Vec3 {
-  return { x: toFixed(p.x), y: toFixed(p.y), z: p.z != null ? toFixed(p.z) : undefined };
-}
-
 // Calculate bwtween two interpolated points
 export function lerpPath(from: Vec3, to: Vec3, steps: number): Vec3[] {
-  if (steps <= 0) return [{ x: toFixed(from.x), y: toFixed(from.y), z: from.z }];
+  if (steps <= 0) return [{ x: from.x, y: from.y, z: from.z }];
   const result: Vec3[] = [];
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
     result.push({
-      x: toFixed(from.x + (to.x - from.x) * t),
-      y: toFixed(from.y + (to.y - from.y) * t),
-      z: from.z != null && to.z != null ? toFixed(from.z + (to.z - from.z) * t) : to.z ?? from.z,
+      x: from.x + (to.x - from.x) * t,
+      y: from.y + (to.y - from.y) * t,
+      z: from.z != null && to.z != null ? from.z + (to.z - from.z) * t : to.z ?? from.z,
     });
   }
   return result;
@@ -144,4 +136,15 @@ export function pathLength(points: Vec3[]): number {
     total += dist(points[i - 1]!, points[i]!);
   }
   return total;
+}
+
+// Finds closest node within radius (page-space) or null
+export function snapToNearestNode(pagePoint: Vec3, nodes: Vec3[], radius: number): Vec3 | null {
+  let bestDist = radius;
+  let best: Vec3 | null = null;
+  for (const node of nodes) {
+    const d = dist(pagePoint, node);
+    if (d < bestDist) { bestDist = d; best = node; }
+  }
+  return best ? { x: best.x, y: best.y, z: pagePoint.z } : null;
 }

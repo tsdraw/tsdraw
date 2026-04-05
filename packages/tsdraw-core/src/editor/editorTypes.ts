@@ -3,11 +3,13 @@ import type { InputManager } from '../input/inputManager.js';
 import type { Viewport } from '../canvas/viewport.js';
 import type { Shape, DrawShape, ShapeId, ColorStyle, DashStyle, FillStyle, SizeStyle } from '../types.js';
 import type { Vec3 } from '../types.js';
+import type { AutoShapeOptions } from '../utils/shapeRecognition.js';
 
 export interface IEditor {
   getZoomLevel(): number;
   readonly viewport: Viewport;
   options: { dragDistanceSquared: number };
+  autoShape: AutoShapeOptions;
   store: DocumentStore;
   input: InputManager;
   getShape(id: ShapeId): Shape | undefined;
@@ -17,6 +19,8 @@ export interface IEditor {
   createShapeId(): ShapeId;
   getErasingShapeIds(): ShapeId[];
   setErasingShapes(ids: ShapeId[]): void;
+  getShapeNodes(excludeId?: ShapeId): Vec3[];
+  getCurrentPageShapes(): Shape[];
   getCurrentPageRenderingShapesSorted(): import('../types.js').Shape[];
   getCurrentDrawStyle(): { color: ColorStyle; dash: DashStyle; fill: FillStyle; size: SizeStyle };
   setCurrentDrawStyle(partial: Partial<{ color: ColorStyle; dash: DashStyle; fill: FillStyle; size: SizeStyle }>): void;
