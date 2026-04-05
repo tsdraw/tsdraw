@@ -343,6 +343,15 @@
   appearance: none;
 }
 
+.tsdraw-vertex-handle {
+  width: 8px;
+  height: 8px;
+  border: 1px solid #4465e9;
+  background: var(--tsdraw-color-handle-fill);
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
 .tsdraw-selection-handle::after {
   content: '';
   position: absolute;

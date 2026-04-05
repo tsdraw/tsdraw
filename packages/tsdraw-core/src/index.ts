@@ -27,6 +27,7 @@ export * from './tools/eraser/states/EraserErasingState.js';
 export * from './tools/select/SelectTool.js';
 export * from './tools/select/states/SelectIdleState.js';
 export * from './tools/select/selectHelpers.js';
+export * from './tools/select/vertexHelpers.js';
 export * from './tools/hand/HandTool.js';
 export * from './tools/hand/states/HandIdleState.js';
 export * from './tools/hand/states/HandDraggingState.js';

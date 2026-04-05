@@ -8,7 +8,7 @@ import { STROKE_WIDTHS, MAX_POINTS_PER_SHAPE } from '../../../types.js';
 import { encodePoints, decodePoints, decodeFirstPoint, decodeLastPoint } from '../../../utils/pathCodec.js';
 import { dist, sqDist, withinRadius, lerpPath, tail, quantizeAngle, rotateAround, boundingBox } from '../../../utils/vec.js';
 import { recognizeShape, type RecognizedShape, type RecognitionEntryInfo } from '../../../utils/shapeRecognition.js';
-import { buildPolylineSegments, buildEllipseSegments } from '../../geometric/geometricShapeHelpers.js';
+import { buildPolylineSegments, buildEllipseSegments, CLOSURE_VERTEX_SNAP_PX } from '../../geometric/geometricShapeHelpers.js';
 
 type StrokePhase = 'free' | 'straight' | 'starting_straight' | 'starting_free';
 
@@ -136,9 +136,10 @@ export class PenDrawingState extends StateNode {
     const lastSeg = segments[segments.length - 1];
     const end = decodeLastPoint(lastSeg!.path);
     if (!first || !end) return false;
-    if (first.x === end.x && first.y === end.y) return false;
     if (this._pathLen <= w * 4 * scale) return false;
-    return withinRadius(first, end, w * 2 * scale);
+    const eps = 1e-6; // space float tolerance (exact closure when first/last sample coincides)
+    if (Math.abs(first.x - end.x) < eps && Math.abs(first.y - end.y) < eps) return true;
+    return withinRadius(first, end, CLOSURE_VERTEX_SNAP_PX * scale);
   }
 
   private measurePath(segments: DrawSegment[]): number {

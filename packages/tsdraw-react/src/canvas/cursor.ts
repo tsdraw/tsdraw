@@ -7,6 +7,7 @@ export function getCanvasCursor(
     isMovingSelection: boolean;
     isResizingSelection: boolean;
     isRotatingSelection: boolean;
+    isDraggingVertex: boolean;
     isHoveringSelectionBounds: boolean;
     showToolOverlay: boolean;
   }
@@ -17,6 +18,7 @@ export function getCanvasCursor(
     if (state.isRotatingSelection) return 'grabbing';
     if (state.isResizingSelection) return 'nwse-resize';
     if (state.isMovingSelection) return 'grabbing';
+    if (state.isDraggingVertex) return 'grabbing';
     if (state.isHoveringSelectionBounds) return 'move';
     return 'default';
   }

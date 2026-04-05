@@ -5,9 +5,8 @@ import { dist, rdpSimplify, angleBetween, nearestPointIndex, boundingBox, pathLe
 
 export const RDP_EPSILON = 0.045; // RDP tolerance vs bbox diagonal (higher -> fewer verts)
 export const VERTEX_MERGE_DIST = 0.05; // merge adjacent verts closer than this x diagonal
-export const CLOSURE_PATH_RATIO = 0.10; // max start-end gap vs stroke length
-export const CLOSURE_DIAGONAL_RATIO = 0.18; // max start-end gap vs bbox diagonal
-export const CLOSURE_AUTO_POLYGON_RATIO = 0.35; // loose diagonal ratio for auto closing polygon
+export const CLOSURE_PATH_RATIO = 0.04; // max start-end gap vs stroke length
+export const CLOSURE_DIAGONAL_RATIO = 0.07; // max start-end gap vs bbox diagonal
 export const ELLIPSE_FIT_TOLERANCE = 0.35; // max mean |(x/a)²+(y/b)²−1|
 export const RECT_ANGLE_TOLERANCE = Math.PI * 0.22; // max deviation from 90° per corner
 export const MIN_PATH_LENGTH = 4; // min arc length (px) before recognition
@@ -49,7 +48,6 @@ export interface AutoShapeThresholds {
   vertexMergeDist: number;
   closurePathRatio: number;
   closureDiagonalRatio: number;
-  closureAutoPolygonRatio: number; // looser diagonal threshold for auto-closing unclosed polygons
   ellipseFitTolerance: number;
   rectAngleTolerance: number;
   minPathLength: number;
@@ -64,7 +62,6 @@ export const DEFAULT_AUTO_SHAPE_THRESHOLDS: Readonly<AutoShapeThresholds> = {
   vertexMergeDist: VERTEX_MERGE_DIST,
   closurePathRatio: CLOSURE_PATH_RATIO,
   closureDiagonalRatio: CLOSURE_DIAGONAL_RATIO,
-  closureAutoPolygonRatio: CLOSURE_AUTO_POLYGON_RATIO,
   ellipseFitTolerance: ELLIPSE_FIT_TOLERANCE,
   rectAngleTolerance: RECT_ANGLE_TOLERANCE,
   minPathLength: MIN_PATH_LENGTH,
@@ -122,15 +119,10 @@ export function recognizeShape(
 
   const cursorPoint = points[points.length - 1]!;
 
-  // Close shapes user drew start -> end strictly
+  // Close shapes when start -> end are genuinely near
   if (isClosed && vertices.length >= 3) {
-    const merged = snapClosedVertices(vertices);
-    return returnClosedPolygon(merged, cursorPoint, allowed, t);
+    return returnClosedPolygon(vertices, cursorPoint, allowed, t);
   }
-
-  // Auto close endpoints within loose polygon threshold
-  const canAutoClose = (!allowed || allowed.includes('polygon')) && vertices.length >= 3 && closingGap < diagonal * t.closureAutoPolygonRatio;
-  if (canAutoClose) { return returnClosedPolygon(vertices, cursorPoint, allowed, t); }
 
   if (allowed && !allowed.includes('polyline')) return null;
   return { kind: 'polyline', vertices, closed: false, activeVertexIdx: nearestPointIndex(vertices, cursorPoint) };
@@ -235,14 +227,6 @@ function filterCloseVertices(vertices: Vec3[], minDist: number): Vec3[] { // dro
   }
   result.push(vertices[vertices.length - 1]!);
   return result;
-}
-
-function snapClosedVertices(vertices: Vec3[]): Vec3[] { // drop duplicate last; end snaps to start
-  if (vertices.length < 3) return vertices;
-  const start = vertices[0]!;
-  const merged: Vec3[] = [{ x: start.x, y: start.y, z: 0.5 }];
-  for (let i = 1; i < vertices.length - 1; i++) merged.push(vertices[i]!);
-  return merged;
 }
 
 function tryRectangleSnap(vertices: Vec3[], angleTolerance: number): Vec3[] | null { // ≈90° corners -> axis-aligned bbox quad

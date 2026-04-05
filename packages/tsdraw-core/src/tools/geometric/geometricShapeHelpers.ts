@@ -1,10 +1,13 @@
 import type { DrawSegment, Vec3 } from '../../types.js';
 import { encodePoints } from '../../utils/pathCodec.js';
+import { dist } from '../../utils/vec.js';
 
 // Helpers for geometric shape tools
 // Each tool provides "constrained" and "unconstrained" bound-builders
 // Constrained forces equal aspect ratio sides (shift), unconstrained allows freeform
 // Segment-builders turn those bounds into encoded draw segments
+
+export const CLOSURE_VERTEX_SNAP_PX = 6;
 
 export interface ShapeBounds {
   x: number;
@@ -124,19 +127,39 @@ export function buildEllipseSegments(width: number, height: number): DrawSegment
   return [{ type: 'free', path: encodePoints(sampledPoints) }];
 }
 
-// Build straight segments between consecutive vertices, with possible closing the segment back to the first point
+// Build straight segments between consecutive vertices, with NO closing back to first point using a new node.
+// For closed polylines, loop is closed by snapping the last vertex onto the first when they are super close (so no unnecessary new nodes are made) or by adding a copy of the first vertex at the end when the gap is larger for rectangles, etc.
 export function buildPolylineSegments(vertices: Vec3[], closed: boolean): DrawSegment[] {
   const segments: DrawSegment[] = [];
-  for (let i = 0; i < vertices.length - 1; i++) {
-    segments.push({
-      type: 'straight',
-      path: encodePoints([vertices[i]!, vertices[i + 1]!]),
-    });
+  if (!closed || vertices.length < 2) {
+    for (let i = 0; i < vertices.length - 1; i++) {
+      segments.push({
+        type: 'straight',
+        path: encodePoints([vertices[i]!, vertices[i + 1]!]),
+      });
+    }
+    return segments;
   }
-  if (closed && vertices.length >= 3) {
+
+  const chain = vertices.map((v) => ({ ...v }));
+  const gap = dist(chain[0]!, chain[chain.length - 1]!);
+  if (vertices.length === 2) {
+    chain.push({ ...chain[0]! });
+  } else if (vertices.length >= 3) {
+    if (gap < CLOSURE_VERTEX_SNAP_PX && chain.length >= 4) {
+      chain[chain.length - 1] = { ...chain[0]! };
+    } else {
+      chain.push({ ...chain[0]! });
+    }
+  }
+
+  for (let i = 0; i < chain.length - 1; i++) {
+    const a = chain[i]!;
+    const b = chain[i + 1]!;
+    if (dist(a, b) < 1e-9) continue;
     segments.push({
       type: 'straight',
-      path: encodePoints([vertices[vertices.length - 1]!, vertices[0]!]),
+      path: encodePoints([a, b]),
     });
   }
   return segments;

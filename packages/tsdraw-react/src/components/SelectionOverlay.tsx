@@ -6,6 +6,7 @@ interface SelectionOverlayProps {
   selectionBrush: ScreenRect | null;
   selectionBounds: ScreenRect | null;
   selectionRotationDeg: number;
+  vertexHandleScreenPositions: { left: number; top: number }[];
   currentTool: ToolId;
   selectedCount: number;
   onRotatePointerDown: (e: ReactPointerEvent<HTMLButtonElement>) => void;
@@ -16,6 +17,7 @@ export function SelectionOverlay({
   selectionBrush,
   selectionBounds,
   selectionRotationDeg,
+  vertexHandleScreenPositions,
   currentTool,
   selectedCount,
   onRotatePointerDown,
@@ -87,6 +89,14 @@ export function SelectionOverlay({
           )}
         </div>
       )}
+      {currentTool === 'select' &&
+        vertexHandleScreenPositions.map((pos, index) => (
+          <div
+            key={`vertex-${index.toString()}`}
+            className="tsdraw-vertex-handle"
+            style={{ position: 'absolute', left: pos.left, top: pos.top, transform: 'translate(-50%, -50%)', pointerEvents: 'none', zIndex: 95 }}
+          />
+        ))}
     </>
   );
 }

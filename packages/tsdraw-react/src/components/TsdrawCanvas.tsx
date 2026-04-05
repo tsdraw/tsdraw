@@ -210,6 +210,7 @@ export function Tsdraw(props: TsdrawProps) {
     selectionBrush,
     selectionBounds,
     selectionRotationDeg,
+    vertexHandleScreenPositions,
     canvasCursor: defaultCanvasCursor,
     cursorContext,
     toolOverlay,
@@ -400,6 +401,7 @@ export function Tsdraw(props: TsdrawProps) {
         selectionBrush={selectionBrush}
         selectionBounds={selectionBounds}
         selectionRotationDeg={selectionRotationDeg}
+        vertexHandleScreenPositions={vertexHandleScreenPositions}
         currentTool={currentTool}
         selectedCount={selectedShapeIds.length}
         onRotatePointerDown={handleRotatePointerDown}

@@ -10,8 +10,11 @@ import {
   applyMove,
   applyResize,
   applyRotation,
+  applyVertexDrag,
   buildStartPositions,
   buildTransformSnapshots,
+  findVertexHit,
+  getVertexHandlePagePositions,
   getSelectionBoundsPage,
   getShapesInBounds,
   getTopShapeAtPoint,
@@ -23,6 +26,8 @@ import {
   type ResizeHandle,
   type ToolDefinition,
   type ToolId,
+  type TransformSnapshot,
+  type VertexRef,
   type Viewport,
   type TsdrawEditorSnapshot,
   type TsdrawBackgroundOptions,
@@ -36,7 +41,7 @@ import { TsdrawLocalIndexedDb } from '../persistence/localIndexedDb.js';
 import { getOrCreateSessionId } from '../persistence/sessionId.js';
 import type { TsdrawCameraOptions, TsdrawTouchOptions, TsdrawKeyboardShortcutOptions, TsdrawPenOptions } from './canvasOptions.js';
 
-type SelectDragMode = 'none' | 'marquee' | 'move' | 'resize' | 'rotate';
+type SelectDragMode = 'none' | 'marquee' | 'move' | 'resize' | 'rotate' | 'vertex';
 
 export interface TsdrawCursorContext {
   currentTool: ToolId;
@@ -45,6 +50,7 @@ export interface TsdrawCursorContext {
   isMovingSelection: boolean;
   isResizingSelection: boolean;
   isRotatingSelection: boolean;
+  isDraggingVertex: boolean;
 }
 
 export interface TsdrawToolOverlayState {
@@ -102,6 +108,7 @@ export interface TsdrawCanvasController {
   selectionBrush: ScreenRect | null;
   selectionBounds: ScreenRect | null;
   selectionRotationDeg: number;
+  vertexHandleScreenPositions: { left: number; top: number }[];
   canvasCursor: string;
   cursorContext: TsdrawCursorContext;
   toolOverlay: TsdrawToolOverlayState;
@@ -213,6 +220,9 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
     startPositions: ReturnType<typeof buildStartPositions>;
     additive: boolean;
     initialSelection: ShapeId[];
+    vertexRefs?: VertexRef[];
+    vertexSnapshots?: Map<ShapeId, TransformSnapshot>;
+    moveFromEmptyInsideBounds?: boolean;
   }>({
     mode: 'none',
     startPage: { x: 0, y: 0 },
@@ -234,6 +244,8 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
   const [isMovingSelection, setIsMovingSelection] = useState(false);
   const [isResizingSelection, setIsResizingSelection] = useState(false);
   const [isRotatingSelection, setIsRotatingSelection] = useState(false);
+  const [isDraggingVertex, setIsDraggingVertex] = useState(false);
+  const [vertexHandleScreenPositions, setVertexHandleScreenPositions] = useState<{ left: number; top: number }[]>([]);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const [isPersistenceReady, setIsPersistenceReady] = useState(!options.persistenceKey);
@@ -320,7 +332,10 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
     setIsMovingSelection(false);
     setIsResizingSelection(false);
     setIsRotatingSelection(false);
+    setIsDraggingVertex(false);
     selectDragRef.current.mode = 'none';
+    selectDragRef.current.vertexRefs = undefined;
+    selectDragRef.current.vertexSnapshots = undefined;
     resizeRef.current = { handle: null, startBounds: null, startShapes: new Map(), cursorHandleOffset: { x: 0, y: 0 } };
     rotateRef.current = { center: null, startAngle: 0, startSelectionRotationDeg: 0, startShapes: new Map() };
   }, []);
@@ -675,6 +690,31 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
       const isPen = first.pointerType === 'pen' || hasRealPressure(first.pressure);
 
       if (currentToolRef.current === 'select') {
+        if (!readOnlyRef.current) {
+          const zoom = editor.viewport.zoom;
+          const marginPage = 12 / zoom; // hit radius around each endpoint
+          const clusterTolerance = 20 / zoom; // gather overlapping endpoints (>= marginPage)
+          const vertexHit = findVertexHit(editor, { x, y }, marginPage, clusterTolerance);
+          if (vertexHit) {
+            const involvedIds = [...new Set(vertexHit.refs.map((r) => r.shapeId))];
+            selectDragRef.current = {
+              mode: 'vertex',
+              startPage: { x, y },
+              currentPage: { x, y },
+              startPositions: new Map(),
+              additive: false,
+              initialSelection: [...selectedShapeIdsRef.current],
+              vertexRefs: vertexHit.refs,
+              vertexSnapshots: vertexHit.snapshots,
+            };
+            setIsDraggingVertex(true);
+            setSelectedShapeIds(involvedIds);
+            selectedShapeIdsRef.current = involvedIds;
+            refreshSelectionBounds(editor, involvedIds);
+            return;
+          }
+        }
+
         const hit = getTopShapeAtPoint(editor, { x, y });
         const isHitSelected = !!(hit && selectedShapeIdsRef.current.includes(hit.id));
 
@@ -693,6 +733,7 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
             startPositions: buildStartPositions(editor, selectedShapeIdsRef.current),
             additive: false,
             initialSelection: [...selectedShapeIdsRef.current],
+            moveFromEmptyInsideBounds: isInsideSelectionBounds && !hit,
           };
           setIsMovingSelection(true);
           return;
@@ -782,6 +823,21 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
           return;
         }
 
+        if (mode === 'vertex') {
+          const drag = selectDragRef.current;
+          const refs = drag.vertexRefs;
+          const snapshots = drag.vertexSnapshots;
+          if (refs && snapshots) {
+            applyVertexDrag(editor, snapshots, refs, {
+              x: px - drag.startPage.x,
+              y: py - drag.startPage.y,
+            });
+            render();
+            refreshSelectionBounds(editor);
+          }
+          return;
+        }
+
         // Marquee selection updates live as brush changes so that the overlay matches feedback
         if (mode === 'marquee') {
           selectDragRef.current.currentPage = { x: px, y: py };
@@ -845,6 +901,25 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
         if (drag.mode === 'move') {
           setIsMovingSelection(false);
           selectDragRef.current.mode = 'none';
+          const distSq = (x - drag.startPage.x) ** 2 + (y - drag.startPage.y) ** 2; // px² from move start; <4 ≈ 2px tap
+          if (drag.moveFromEmptyInsideBounds && distSq < 4) {
+            setSelectedShapeIds([]);
+            selectedShapeIdsRef.current = [];
+            setSelectionBounds(null);
+          } else {
+            refreshSelectionBounds(editor);
+          }
+          selectDragRef.current.moveFromEmptyInsideBounds = undefined;
+          render();
+          editor.endHistoryEntry();
+          return;
+        }
+
+        if (drag.mode === 'vertex') {
+          setIsDraggingVertex(false);
+          selectDragRef.current.mode = 'none';
+          selectDragRef.current.vertexRefs = undefined;
+          selectDragRef.current.vertexSnapshots = undefined;
           render();
           refreshSelectionBounds(editor);
           editor.endHistoryEntry();
@@ -928,7 +1003,15 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
         const drag = selectDragRef.current;
         if (drag.mode === 'rotate') setIsRotatingSelection(false);
         if (drag.mode === 'resize') setIsResizingSelection(false);
-        if (drag.mode === 'move') setIsMovingSelection(false);
+        if (drag.mode === 'move') {
+          setIsMovingSelection(false);
+          selectDragRef.current.moveFromEmptyInsideBounds = undefined;
+        }
+        if (drag.mode === 'vertex') {
+          setIsDraggingVertex(false);
+          selectDragRef.current.vertexRefs = undefined;
+          selectDragRef.current.vertexSnapshots = undefined;
+        }
         if (drag.mode === 'marquee') setSelectionBrush(null);
         if (drag.mode !== 'none') {
           selectDragRef.current.mode = 'none';
@@ -1290,10 +1373,27 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
     && pointerScreenPoint.y <= selectionBounds.top + selectionBounds.height;
 
   const showToolOverlay = isPointerInsideCanvas && (currentTool === 'pen' || currentTool === 'eraser');
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor || currentTool !== 'select' || selectedShapeIds.length === 0) {
+      setVertexHandleScreenPositions([]);
+      return;
+    }
+    const pagePts = getVertexHandlePagePositions(editor, selectedShapeIds); // page-space endpoint positions
+    setVertexHandleScreenPositions(
+      pagePts.map((pg) => {
+        const s = pageToScreen(editor.viewport, pg.x, pg.y);
+        return { left: s.x, top: s.y };
+      })
+    );
+  }, [currentTool, selectedShapeIds, selectionBounds, isPersistenceReady]);
+
   const canvasCursor = getCanvasCursor(currentTool, {
     isMovingSelection,
     isResizingSelection,
     isRotatingSelection,
+    isDraggingVertex,
     isHoveringSelectionBounds,
     showToolOverlay,
   });
@@ -1304,6 +1404,7 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
     isMovingSelection,
     isResizingSelection,
     isRotatingSelection,
+    isDraggingVertex,
   };
   const toolOverlay: TsdrawToolOverlayState = {
     visible: showToolOverlay,
@@ -1327,6 +1428,7 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
     selectionBrush,
     selectionBounds,
     selectionRotationDeg,
+    vertexHandleScreenPositions,
     canvasCursor,
     cursorContext,
     toolOverlay,
