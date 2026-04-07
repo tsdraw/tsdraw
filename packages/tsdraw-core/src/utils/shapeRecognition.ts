@@ -3,11 +3,13 @@ import { dist, rdpSimplify, angleBetween, nearestPointIndex, boundingBox, pathLe
 
 // Recognition thresholds (subject to change)
 
-export const RDP_EPSILON = 0.045; // RDP tolerance vs bbox diagonal (higher -> fewer verts)
+export const RDP_EPSILON = 0.03; // RDP tolerance vs bbox diagonal (higher -> fewer verts)
 export const VERTEX_MERGE_DIST = 0.05; // merge adjacent verts closer than this x diagonal
 export const CLOSURE_PATH_RATIO = 0.04; // max start-end gap vs stroke length
 export const CLOSURE_DIAGONAL_RATIO = 0.07; // max start-end gap vs bbox diagonal
 export const ELLIPSE_FIT_TOLERANCE = 0.35; // max mean |(x/a)²+(y/b)²−1|
+export const ELLIPSE_DURATION_REF_MS_PER_PATH_PX = 0.55; // ms of a stroke per px of path length. above this, ellipse tolerance tightens
+export const ELLIPSE_MIN_FIT_TOLERANCE_SCALE = 0.28; // minimum tolerance scale for ellipse fit
 export const RECT_ANGLE_TOLERANCE = Math.PI * 0.22; // max deviation from 90° per corner
 export const MIN_PATH_LENGTH = 4; // min arc length (px) before recognition
 
@@ -49,6 +51,8 @@ export interface AutoShapeThresholds {
   closurePathRatio: number;
   closureDiagonalRatio: number;
   ellipseFitTolerance: number;
+  ellipseDurationRefMsPerPathPx: number;
+  ellipseMinFitToleranceScale: number;
   rectAngleTolerance: number;
   minPathLength: number;
   speedDipRatio: number;
@@ -63,6 +67,8 @@ export const DEFAULT_AUTO_SHAPE_THRESHOLDS: Readonly<AutoShapeThresholds> = {
   closurePathRatio: CLOSURE_PATH_RATIO,
   closureDiagonalRatio: CLOSURE_DIAGONAL_RATIO,
   ellipseFitTolerance: ELLIPSE_FIT_TOLERANCE,
+  ellipseDurationRefMsPerPathPx: ELLIPSE_DURATION_REF_MS_PER_PATH_PX,
+  ellipseMinFitToleranceScale: ELLIPSE_MIN_FIT_TOLERANCE_SCALE,
   rectAngleTolerance: RECT_ANGLE_TOLERANCE,
   minPathLength: MIN_PATH_LENGTH,
   speedDipRatio: SPEED_DIP_RATIO,
@@ -103,7 +109,15 @@ export function recognizeShape(
   const isClosed = closingGap < totalLen * t.closurePathRatio && closingGap < diagonal * t.closureDiagonalRatio;
 
   if (isClosed) {
-    const ellipse = tryEllipse(points, bb, t.ellipseFitTolerance); // raw points, no RDP verts yet
+    const ellipseTol = ellipseFitToleranceForStrokeDuration(
+      timestamps,
+      points,
+      totalLen,
+      t.ellipseFitTolerance,
+      t.ellipseDurationRefMsPerPathPx,
+      t.ellipseMinFitToleranceScale,
+    );
+    const ellipse = tryEllipse(points, bb, ellipseTol);
     if (ellipse && (!allowed || allowed.includes('ellipse'))) return ellipse;
   }
 
@@ -114,8 +128,14 @@ export function recognizeShape(
   const keyIndices = canRefineWithSpeed ? refineVerticesWithSpeed(rdpIndices, points, timestamps!, t) : rdpIndices;
 
   const rawVertices = keyIndices.map((i) => points[i]!);
-  const vertices = filterCloseVertices(rawVertices, diagonal * t.vertexMergeDist);
+  const mergeDist = diagonal * t.vertexMergeDist;
+  let vertices = filterCloseVertices(rawVertices, mergeDist);
   if (vertices.length < 2) return null;
+
+  // If the stroke is closed and has at least 4 vertices and start -> end are neat, remove the last vertex. This doesn't allow for triangles to be made into rectangles but prevents RDP from adding a fourth vertex
+  if (isClosed && vertices.length >= 4 && dist(vertices[0]!, vertices[vertices.length - 1]!) < mergeDist) {
+    vertices = vertices.slice(0, -1);
+  }
 
   const cursorPoint = points[points.length - 1]!;
 
@@ -247,11 +267,25 @@ function tryRectangleSnap(vertices: Vec3[], angleTolerance: number): Vec3[] | nu
   ];
 }
 
-function tryEllipse(
+function ellipseFitToleranceForStrokeDuration(
+  timestamps: number[] | undefined,
   points: Vec3[],
-  bb: { x: number; y: number; width: number; height: number },
-  fitTolerance: number,
-): RecognizedEllipse | null { // normalized ellipse equation fit vs bbox
+  pathLen: number,
+  baseTolerance: number,
+  refMsPerPathPx: number,
+  minScale: number,
+): number {
+  if (!timestamps || timestamps.length !== points.length || points.length < 2 || pathLen <= 0) {
+    return baseTolerance;
+  }
+  const durationMs = timestamps[timestamps.length - 1]! - timestamps[0]!;
+  if (durationMs <= 0) return baseTolerance;
+  const msPerPx = durationMs / pathLen;
+  const durationScale = Math.min(1, Math.max(minScale, refMsPerPathPx / msPerPx));
+  return baseTolerance * durationScale;
+}
+
+function tryEllipse(points: Vec3[], bb: { x: number; y: number; width: number; height: number }, fitTolerance: number): RecognizedEllipse | null { // normalized ellipse equation fit vs bbox
   const w = Math.max(bb.width, 1);
   const h = Math.max(bb.height, 1);
   const cx = bb.x + w / 2;

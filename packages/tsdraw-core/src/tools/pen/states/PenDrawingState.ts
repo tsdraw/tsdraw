@@ -12,7 +12,7 @@ import { buildPolylineSegments, buildEllipseSegments, CLOSURE_VERTEX_SNAP_PX } f
 
 type StrokePhase = 'free' | 'straight' | 'starting_straight' | 'starting_free';
 
-const DWELL_TIMEOUT_MS = 500; // start shape snapping 500ms after last move
+const DWELL_TIMEOUT_MS = 600; // start shape snapping 600ms after last move
 const DWELL_MOVE_THRESHOLD = 3; // allow 3px of movement
 
 // State for when pen is being used
@@ -35,6 +35,7 @@ export class PenDrawingState extends StateNode {
   private _pointTimestamps: number[] = [];
   private _dwellTimer: ReturnType<typeof setTimeout> | null = null;
   private _dwellAnchor: Vec3 = { x: 0, y: 0 };
+  private _closureLocked = false;
 
   override onEnter(info?: ToolPointerDownInfo): void {
     this._startInfo = info ?? { point: { x: 0, y: 0, z: 0.5 } };
@@ -137,9 +138,18 @@ export class PenDrawingState extends StateNode {
     const end = decodeLastPoint(lastSeg!.path);
     if (!first || !end) return false;
     if (this._pathLen <= w * 4 * scale) return false;
-    const eps = 1e-6; // space float tolerance (exact closure when first/last sample coincides)
+    const eps = 1e-6;
     if (Math.abs(first.x - end.x) < eps && Math.abs(first.y - end.y) < eps) return true;
     return withinRadius(first, end, CLOSURE_VERTEX_SNAP_PX * scale);
+  }
+
+  private checkClosure(segments: DrawSegment[], size: DrawShape['props']['size'], scale: number): boolean {
+    if (this._closureLocked) return true;
+    if (this.detectClosure(segments, size, scale)) {
+      this._closureLocked = true;
+      return true;
+    }
+    return false;
   }
 
   private measurePath(segments: DrawSegment[]): number {
@@ -177,6 +187,7 @@ export class PenDrawingState extends StateNode {
       const prevEnd = decodeLastPoint(prevSeg.path);
       if (!prevEnd) { this.spawnShape(origin, pressure); return; }
       this._extending = true;
+      this._closureLocked = false;
       const local = this.editor.getPointInShapeSpace(existing, origin);
       const localPt: Vec3 = { x: local.x, y: local.y, z: pressure };
       const newSeg: DrawSegment = {
@@ -199,11 +210,45 @@ export class PenDrawingState extends StateNode {
           type: 'draw',
           props: {
             segments: segs,
-            isClosed: this.detectClosure(segs, existing.props.size, existing.props.scale),
+              isClosed: this.checkClosure(segs, existing.props.size, existing.props.scale),
           },
         },
       ]);
       return;
+    }
+
+    // If the previous shape ends near the current origin and is freehand, continue it instead of making a new shape.
+    // This allows the entire stroke to be in one shape so shapes that were somehow broken can be recognized as one.
+    // This fixes the autoshape issue where autoshape only works on a bit of a shape (due to other bits breaking off).
+    if (existing && existing.props.segments.some((s) => s.type === 'free')) {
+      const prevSeg = tail(existing.props.segments);
+      if (prevSeg) {
+        const prevEnd = decodeLastPoint(prevSeg.path);
+        if (prevEnd) {
+          const prevEndPage: Vec3 = { x: existing.x + prevEnd.x, y: existing.y + prevEnd.y };
+          const snapDist = CLOSURE_VERTEX_SNAP_PX / this.editor.getZoomLevel();
+          if (withinRadius(origin, prevEndPage, snapDist)) {
+            this._closureLocked = false;
+            const local = this.editor.getPointInShapeSpace(existing, origin);
+            const localPt: Vec3 = { x: local.x, y: local.y, z: pressure };
+            this._activePts = [localPt];
+            this._pointTimestamps = [performance.now()];
+            const newSeg: DrawSegment = { type: 'free', path: encodePoints([localPt]) };
+            const segs = [...existing.props.segments, newSeg];
+            this._pathLen = this.measurePath(segs);
+            this.editor.updateShapes([{
+              id: existing.id,
+              type: 'draw',
+              props: {
+                segments: segs,
+                isComplete: false,
+                isClosed: this.checkClosure(segs, existing.props.size, existing.props.scale),
+              },
+            }]);
+            return;
+          }
+        }
+      }
     }
 
     this.spawnShape(origin, pressure);
@@ -213,6 +258,7 @@ export class PenDrawingState extends StateNode {
   private spawnShape(originPt: Vec3, pressure: number): void {
     const origin = originPt;
     this._anchor = { ...origin };
+    this._closureLocked = false;
     const drawStyle = this.editor.getCurrentDrawStyle();
     const id = this.editor.createShapeId();
     const firstPt: Vec3 = { x: 0, y: 0, z: pressure };
@@ -301,7 +347,7 @@ export class PenDrawingState extends StateNode {
             type: 'draw',
             props: {
               segments: withStraightSeg,
-              isClosed: this.detectClosure(withStraightSeg, size, scale),
+              isClosed: this.checkClosure(withStraightSeg, size, scale),
             },
           },
         ]);
@@ -332,7 +378,7 @@ export class PenDrawingState extends StateNode {
             type: 'draw',
             props: {
               segments: allSegs,
-              isClosed: this.detectClosure(allSegs, size, scale),
+              isClosed: this.checkClosure(allSegs, size, scale),
             },
           },
         ]);
@@ -377,7 +423,7 @@ export class PenDrawingState extends StateNode {
             type: 'draw',
             props: {
               segments: updated,
-              isClosed: this.detectClosure(updated, size, scale),
+              isClosed: this.checkClosure(updated, size, scale),
             },
           },
         ]);
@@ -412,42 +458,29 @@ export class PenDrawingState extends StateNode {
             type: 'draw',
             props: {
               segments: updated,
-              isClosed: this.detectClosure(updated, size, scale),
+              isClosed: this.checkClosure(updated, size, scale),
             },
           },
         ]);
         if (cached.length > MAX_POINTS_PER_SHAPE) {
-          this.editor.updateShapes([{ id, type: 'draw', props: { isComplete: true } }]);
-          const newId = this.editor.createShapeId();
+          // Cap the current segment and start a new one in the SAME shape so full stroke stays together for autoshape.
           const curPage = inputs.getCurrentPagePoint();
+          const local = this.editor.getPointInShapeSpace(shape, curPage);
           const firstPt: Vec3 = {
-            x: 0,
-            y: 0,
+            x: local.x,
+            y: local.y,
             z: this._hasPressure ? (curPage.z ?? 0.5) * 1.25 : 0.5,
           };
           this._activePts = [firstPt];
           this._pointTimestamps = [performance.now()];
-          this.editor.createShape({
-            id: newId,
+          const newSeg: DrawSegment = { type: 'free', path: encodePoints([firstPt]) };
+          const withNewSeg = [...updated, newSeg];
+          this._pathLen = this.measurePath(withNewSeg);
+          this.editor.updateShapes([{
+            id,
             type: 'draw',
-            x: curPage.x,
-            y: curPage.y,
-            props: {
-              color: shape.props.color,
-              dash: shape.props.dash,
-              size: shape.props.size,
-              scale: shape.props.scale,
-              isPen: this._hasPressure,
-              isComplete: false,
-              segments: [{ type: 'free', path: encodePoints([firstPt]) }],
-            },
-          });
-          const created = this.editor.getShape(newId) as DrawShape | undefined;
-          if (created) {
-            this._target = created;
-            this._lastSample = { ...curPage };
-            this._pathLen = 0;
-          }
+            props: { segments: withNewSeg },
+          }]);
         }
         break;
       }
@@ -497,16 +530,22 @@ export class PenDrawingState extends StateNode {
     const shape = this.editor.getShape(target.id) as DrawShape | undefined;
     if (!shape) return;
 
-    const pagePoints: Vec3[] = this._activePts.map((pt) => ({
-      x: pt.x + shape.x,
-      y: pt.y + shape.y,
-      z: pt.z,
-    }));
+    // Get points from all segments so autoshape sees the full stroke even when multiple broken segments exist (merged strokes, mode switches, etc.)
+    const pagePoints: Vec3[] = [];
+    for (const seg of shape.props.segments) {
+      const pts = decodePoints(seg.path);
+      for (const p of pts) {
+        pagePoints.push({ x: p.x + shape.x, y: p.y + shape.y, z: p.z });
+      }
+    }
     if (pagePoints.length < 3) return;
 
-    const timestamps = this._pointTimestamps.length === pagePoints.length
-      ? this._pointTimestamps
-      : undefined;
+    // Timestamps are only reliable when shape has a single free segment which's points exactly match _activePts. otherwise skip them
+    const timestamps =
+      shape.props.segments.length === 1 &&
+      this._pointTimestamps.length === pagePoints.length
+        ? this._pointTimestamps
+        : undefined;
 
     const recognized = recognizeShape(pagePoints, timestamps, this.editor.autoShape);
     if (!recognized) return;
