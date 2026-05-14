@@ -37,18 +37,18 @@ interface ToolbarProps {
 }
 
 export function getDefaultToolbarIcon(toolId: ToolId, isActive: boolean): ReactNode {
-  if (toolId === 'select') return <IconPointer size={16} stroke={1.8} fill={isActive ? 'currentColor' : 'none'} />;
-  if (toolId === 'pen') return <IconPencil size={16} stroke={1.8} fill={isActive ? 'currentColor' : 'none'} />;
-  if (toolId === 'square') return <IconSquare size={16} stroke={1.8} fill={isActive ? 'currentColor' : 'none'} />;
-  if (toolId === 'circle') return <IconCircle size={16} stroke={1.8} fill={isActive ? 'currentColor' : 'none'} />;
-  if (toolId === 'eraser') return <IconEraser size={16} stroke={1.8} fill={isActive ? 'currentColor' : 'none'} />;
-  if (toolId === 'hand') return <IconHandStop size={16} stroke={isActive ? 1 : 1.8} fill={isActive ? 'currentColor' : 'none'} style={isActive ? { stroke: '#000000' } : undefined} />;
+  if (toolId === 'select') return <IconPointer size={18} stroke={1.75} fill={isActive ? 'currentColor' : 'none'} />;
+  if (toolId === 'pen') return <IconPencil size={18} stroke={1.75} fill={isActive ? 'currentColor' : 'none'} />;
+  if (toolId === 'square') return <IconSquare size={18} stroke={1.75} fill={isActive ? 'currentColor' : 'none'} />;
+  if (toolId === 'circle') return <IconCircle size={18} stroke={1.75} fill={isActive ? 'currentColor' : 'none'} />;
+  if (toolId === 'eraser') return <IconEraser size={18} stroke={1.75} fill={isActive ? 'currentColor' : 'none'} />;
+  if (toolId === 'hand') return <IconHandStop size={18} stroke={isActive ? 1 : 1.75} fill={isActive ? 'currentColor' : 'none'} />;
   return null;
 }
 
 function getActionIcon(actionId: 'undo' | 'redo'): ReactNode {
-  if (actionId === 'undo') return <IconArrowBackUp size={16} stroke={1.8} />;
-  return <IconArrowForwardUp size={16} stroke={1.8} />;
+  if (actionId === 'undo') return <IconArrowBackUp size={18} stroke={1.75} />;
+  return <IconArrowForwardUp size={18} stroke={1.75} />;
 }
 
 export function Toolbar({ parts, currentTool, onToolChange, disabled, style, orientation='horizontal', draggable=false, onDragEnd }: ToolbarProps) {

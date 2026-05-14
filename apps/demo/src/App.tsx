@@ -6,15 +6,14 @@ import Confetti from 'react-confetti-boom';
 import { IconStar, IconStarFilled, IconMoodSmile } from '@tabler/icons-react';
 import { wavyToolDefinition } from './wavyTool.js';
 import { emojiToolDefinition } from './emojiTool.js';
-import './App.css';
 
 // These are custom tools which we can easily add to the toolbar using the customTools prop. After, position them in the toolbar using uiOptions.toolbar.parts
 // Go to wavyTool.ts or emojiTool.ts to see how they're built using custom logic
 const wavyTool: TsdrawCustomTool = {
   id: 'wavy',
   label: 'Wavy',
-  icon: <IconStar size={16} />,
-  iconSelected: <IconStarFilled size={16} />,
+  icon: <IconStar size={18} />,
+  iconSelected: <IconStarFilled size={18} />,
   definition: wavyToolDefinition,
   stylePanel: {
     parts: ['colors', 'dashes', 'sizes'],
@@ -56,15 +55,14 @@ function EmojiPickerPart({
   }, [onSelect]);
 
   return (
-    <div className="tsdraw-style-colors" style={{ padding: 0, gridTemplateColumns: 'repeat(4, 1fr)' }}>
+    <div className="tsdraw-style-colors tsdraw-style-colors--flush">
       {emojiOptions.map((emoji) => (
         <button
           key={emoji}
           type="button"
-          className="tsdraw-style-color"
+          className="tsdraw-style-color tsdraw-style-color--emoji"
           data-active={selectedEmoji === emoji ? 'true' : undefined}
           onClick={() => handleSelect(emoji)}
-          style={{ fontSize: '20px' }}
         >
           {emoji}
         </button>
@@ -117,7 +115,7 @@ export function App() {
     () => ({
       id: 'emoji',
       label: 'Emoji',
-      icon: <IconMoodSmile size={16} />,
+      icon: <IconMoodSmile size={18} />,
       definition: emojiToolDefinition,
       stylePanel: {
         parts: ['dashes', 'sizes', 'emoji-picker'],
@@ -138,7 +136,7 @@ export function App() {
   const confettiButton: TsdrawCustomElement = {
     id: 'confetti-btn',
     placement: { anchor: 'top-left', edgeOffset: 18 },
-    render: () => <button className="custom-btn" onClick={triggerConfetti}>more confetti!</button>,
+    render: () => <button type="button" className="tsdraw-pill-action" onClick={triggerConfetti}>more confetti!</button>,
   };
 
   const randomStyleButton: TsdrawCustomElement = {
@@ -146,7 +144,8 @@ export function App() {
     placement: { anchor: 'bottom-right', edgeOffset: 18 },
     render: ({ applyDrawStyle }) => (
       <button
-        className="custom-btn"
+        type="button"
+        className="tsdraw-pill-action"
         onClick={() =>
           applyDrawStyle({
             color: pickRandomStyle(drawColors),
@@ -164,15 +163,15 @@ export function App() {
       id: 'autoshape-panel',
       placement: { anchor: 'bottom-left', edgeOffset: 18 },
       render: () => (
-        <div className="tsdraw-component" style={{ padding: 8 }}>
-          <label style={{ color: 'var(--tsdraw-color-text)', fontWeight: 'bold' }}>
+        <div className="tsdraw-component tsdraw-overlay-panel">
+          <label className="tsdraw-overlay-label tsdraw-overlay-label--strong">
             <input type="checkbox" checked={autoShapeEnabled} onChange={(e) => setAutoShapeEnabled(e.target.checked)} />
             Auto-shape
           </label>
           {autoShapeEnabled && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
+            <div className="tsdraw-overlay-stack">
               {ALL_SHAPE_KINDS.map((kind) => (
-                <label key={kind} style={{ color: 'var(--tsdraw-color-text)' }}>
+                <label key={kind} className="tsdraw-overlay-label">
                   <input
                     type="checkbox"
                     checked={autoShapeWhitelist.includes(kind)}
@@ -230,7 +229,7 @@ export function App() {
         autoShape={autoShapeConfig}
         uiOptions={{
           toolbar: {
-            placement: { anchor: 'top-center', edgeOffset: 18, style: { border: '1px solid var(--tsdraw-color-selected)' } },
+            placement: { anchor: 'top-center', edgeOffset: 18 },
             parts: [['undo', 'redo'], ['select', 'hand', 'pen', 'square', 'eraser', 'wavy', 'emoji']],
             draggable: true,
             saveDraggedPosition: true,

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { IconArrowLeft, IconArrowRight } from '@tabler/icons-react';
 import { Tsdraw } from '@tsdraw/react';
-import './App.css';
 
 // This app is a demo persistence in tsdraw, with some custom elements
 // Try working through the simple math problems, switching between them, and reloading the page
@@ -43,17 +42,17 @@ export function App() {
             {
               id: `problem-${activeProblem.id}`,
               placement: { anchor: 'bottom-center', edgeOffset: 30 },
-              render: () => activeProblem.question,
+              render: () => <div className="tsdraw-component tsdraw-overlay-panel tsdraw-overlay-panel--caption">{activeProblem.question}</div>,
             },
             {
               id: `previous-${activeProblem.id}`,
               placement: { anchor: 'bottom-left', edgeOffset: 18 },
-              render: () => <IconArrowLeft className='switch-btn' size={18} onClick={goToPreviousProblem} />
+              render: () => <button type="button" className="tsdraw-icon-pill" onClick={goToPreviousProblem} aria-label="Previous problem"><IconArrowLeft size={18} stroke={1.75} /></button>,
             },
             {
               id: `next-${activeProblem.id}`,
               placement: { anchor: 'bottom-right', edgeOffset: 18 },
-              render: () => <IconArrowRight className='switch-btn' size={18} onClick={goToNextProblem} />
+              render: () => <button type="button" className="tsdraw-icon-pill" onClick={goToNextProblem} aria-label="Next problem"><IconArrowRight size={18} stroke={1.75} /></button>,
             },
           ],
         }}
