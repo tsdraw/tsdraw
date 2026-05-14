@@ -31,9 +31,16 @@ Position relative to the edge:
 
 ## Style panel
 
+Click a bubble to open a **context-style menu** at the pointer with every choice together; the current value stays highlighted in the list.
+
 ### Hiding
 ```tsx
 <Tsdraw uiOptions={{ stylePanel: { hide: true } }} />
+```
+
+### Placement
+```tsx
+<Tsdraw uiOptions={{ stylePanel: { placement: { anchor: 'top-right', edgeOffset: 18 } } }} />
 ```
 
 ## Custom elements

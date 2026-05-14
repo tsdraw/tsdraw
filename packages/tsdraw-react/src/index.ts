@@ -14,6 +14,7 @@ export type {
 export type {
   TsdrawStylePanelPartItem,
   TsdrawStylePanelCustomPart,
+  TsdrawStylePanelMenuPlacement,
   TsdrawStylePanelRenderContext,
 } from './components/ui/StylePanel.js';
 export type {

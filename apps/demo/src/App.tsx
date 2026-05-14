@@ -229,14 +229,13 @@ export function App() {
         autoShape={autoShapeConfig}
         uiOptions={{
           toolbar: {
-            placement: { anchor: 'top-center', edgeOffset: 18 },
+            placement: { anchor: 'bottom-center', edgeOffset: 18 },
             parts: [['undo', 'redo'], ['select', 'hand', 'pen', 'square', 'eraser', 'wavy', 'emoji']],
             draggable: true,
             saveDraggedPosition: true,
             disabledDragPositions: ['top-left', 'bottom-right'],
           },
           stylePanel: {
-            placement: { anchor: 'top-right', edgeOffset: 18 },
             hide: false,
           },
           customElements: [confettiButton, randomStyleButton, autoShapePanelElement],

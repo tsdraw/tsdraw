@@ -3,7 +3,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import type { ColorStyle, DashStyle, DefaultToolId, FillStyle, SizeStyle, ToolDefinition, ToolId, Viewport, TsdrawDocumentSnapshot, TsdrawEditorSnapshot, TsdrawBackgroundOptions, AutoShapeOptions } from '@tsdraw/core';
 import type { TsdrawCameraOptions, TsdrawTouchOptions, TsdrawKeyboardShortcutOptions, TsdrawPenOptions } from '../canvas/canvasOptions.js';
 import { SelectionOverlay } from './SelectionOverlay.js';
-import { StylePanel, type TsdrawStylePanelCustomPart, type TsdrawStylePanelPartItem } from './ui/StylePanel.js';
+import { StylePanel, type TsdrawStylePanelCustomPart, type TsdrawStylePanelMenuPlacement, type TsdrawStylePanelPartItem } from './ui/StylePanel.js';
 import { ToolOverlay } from './ToolOverlay.js';
 import { Toolbar, getDefaultToolbarIcon, type ToolbarPart } from './ui/Toolbar.js';
 import {
@@ -41,6 +41,14 @@ const DEFAULT_TOOL_LABELS: Record<DefaultToolId, string> = {
   eraser: 'Eraser',
   hand: 'Hand',
 };
+
+function getMenuPlacementForToolbar(anchor: UiAnchor): TsdrawStylePanelMenuPlacement {
+  if (anchor.includes('bottom')) return 'top';
+  if (anchor.includes('top')) return 'bottom';
+  if (anchor.includes('left')) return 'right';
+  if (anchor.includes('right')) return 'left';
+  return 'top';
+}
 
 export type { UiAnchor, TsdrawUiPlacement } from './ui/BaseComponent.js';
 
@@ -251,7 +259,8 @@ export function Tsdraw(props: TsdrawProps) {
     : toolbarPlacement;
   const toolbarPlacementStyle = resolvePlacementStyle(effectiveToolbarPlacement, 'bottom-center', 14);
   const toolbarOrientation = resolveOrientation(toolbarPlacementAnchor);
-  const stylePanelPlacementStyle = resolvePlacementStyle(props.uiOptions?.stylePanel?.placement, 'top-right', 8);
+  const stylePanelMenuPlacement = getMenuPlacementForToolbar(toolbarPlacementAnchor);
+  const stylePanelPlacementStyle = resolvePlacementStyle(props.uiOptions?.stylePanel?.placement, 'bottom-center', 88);
   const isToolbarHidden = props.uiOptions?.toolbar?.hide === true;
   useEffect(() => {
     if (!isToolbarDraggable || !shouldSaveDraggedToolbarPosition || typeof window === 'undefined') return;
@@ -413,6 +422,7 @@ export function Tsdraw(props: TsdrawProps) {
         customParts={stylePanelCustomParts}
         style={stylePanelPlacementStyle}
         theme={resolvedTheme}
+        menuPlacement={stylePanelMenuPlacement}
         drawColor={drawColor}
         drawDash={drawDash}
         drawFill={drawFill}
