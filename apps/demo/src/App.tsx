@@ -1,5 +1,5 @@
 import { createRoot } from 'react-dom/client';
-import { useCallback, useRef, useState, useMemo, type MutableRefObject } from 'react';
+import { useCallback, useRef, useState, useMemo, useSyncExternalStore } from 'react';
 import { Tsdraw, type TsdrawCustomTool, type TsdrawCustomElement, type AutoShapeKind, type AutoShapeOptions } from '@tsdraw/react';
 import { DEFAULT_COLORS, type ColorStyle, type DashStyle, type SizeStyle } from '@tsdraw/core';
 import Confetti from 'react-confetti-boom';
@@ -40,29 +40,23 @@ function triggerConfetti() {
   root.render(<Confetti mode="boom" particleCount={100} shapeSize={15} spreadDeg={70} />);
 }
 
-function EmojiPickerPart({
-  selectedEmojiRef,
-  onSelect,
-}: {
-  selectedEmojiRef: MutableRefObject<string>;
-  onSelect: (emoji: string) => void;
-}) {
-  const [selectedEmoji, setSelectedEmoji] = useState(selectedEmojiRef.current);
+// preview and picker components for the emoji tool style panel, so that the emoji can be previewed and selected properly
+function EmojiStripPreview({ subscribe, getSnapshot }: { subscribe: (onStoreChange: () => void) => () => void; getSnapshot: () => string }) {
+  const emoji = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  return <span className="tsdraw-style-toggle-emoji">{emoji}</span>;
+}
 
-  const handleSelect = useCallback((emoji: string) => {
-    setSelectedEmoji(emoji);
-    onSelect(emoji);
-  }, [onSelect]);
-
+function EmojiPickerPart({ subscribe, getSnapshot, onSelect }: { subscribe: (onStoreChange: () => void) => () => void; getSnapshot: () => string; onSelect: (emoji: string) => void }) {
+  const currentEmoji = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
   return (
-    <div className="tsdraw-style-colors tsdraw-style-colors--flush">
+    <div className="tsdraw-style-grid">
       {emojiOptions.map((emoji) => (
         <button
           key={emoji}
           type="button"
-          className="tsdraw-style-color tsdraw-style-color--emoji"
-          data-active={selectedEmoji === emoji ? 'true' : undefined}
-          onClick={() => handleSelect(emoji)}
+          className="tsdraw-style-cell tsdraw-style-cell--emoji"
+          data-active={currentEmoji === emoji ? 'true' : undefined}
+          onClick={() => onSelect(emoji)}
         >
           {emoji}
         </button>
@@ -83,7 +77,8 @@ const demoAutoShapeThresholds: NonNullable<AutoShapeOptions['thresholds']> = {
 
 export function App() {
   const editorRef = useRef<any>(null);
-  const selectedEmojiRef = useRef(defaultEmoji);
+  const emojiChoiceRef = useRef(defaultEmoji);
+  const emojiChoiceListenersRef = useRef(new Set<() => void>());
   const [autoShapeEnabled, setAutoShapeEnabled] = useState(true);
   const [autoShapeWhitelist, setAutoShapeWhitelist] = useState<AutoShapeKind[]>([...ALL_SHAPE_KINDS]);
 
@@ -103,12 +98,28 @@ export function App() {
     });
   }, []);
 
-  const handleEmojiSelect = useCallback((nextEmoji: string) => {
-    selectedEmojiRef.current = nextEmoji;
-    if (editorRef.current) {
-      editorRef.current.selectedEmoji = nextEmoji;
-    }
+  // Allows the user to select an emoji and have it displayed in the emoji tool style panel correctly
+  const subscribeEmojiChoice = useCallback((onStoreChange: () => void) => {
+    emojiChoiceListenersRef.current.add(onStoreChange);
+    return () => void emojiChoiceListenersRef.current.delete(onStoreChange);
   }, []);
+
+  const getEmojiChoiceSnapshot = useCallback(() => emojiChoiceRef.current, []);
+
+  const notifyEmojiChoiceChanged = useCallback(() => {
+    emojiChoiceListenersRef.current.forEach((listener) => listener());
+  }, []);
+
+  const handleEmojiSelect = useCallback(
+    (nextEmoji: string) => {
+      emojiChoiceRef.current = nextEmoji;
+      notifyEmojiChoiceChanged();
+      if (editorRef.current) {
+        editorRef.current.selectedEmoji = nextEmoji;
+      }
+    },
+    [notifyEmojiChoiceChanged],
+  );
 
   // Use useMemo to memoize the emoji tool to avoid re-rendering the Tsdraw instance unnecessarily
   const emojiTool = useMemo<TsdrawCustomTool>(
@@ -122,12 +133,14 @@ export function App() {
         customParts: [
           {
             id: 'emoji-picker',
-            render: () => <EmojiPickerPart selectedEmojiRef={selectedEmojiRef} onSelect={handleEmojiSelect} />,
+            label: 'Emoji',
+            renderTriggerPreview: () => <EmojiStripPreview subscribe={subscribeEmojiChoice} getSnapshot={getEmojiChoiceSnapshot} />,
+            render: () => <EmojiPickerPart subscribe={subscribeEmojiChoice} getSnapshot={getEmojiChoiceSnapshot} onSelect={handleEmojiSelect} />
           },
         ],
       },
     }),
-    [handleEmojiSelect]
+    [handleEmojiSelect, subscribeEmojiChoice, getEmojiChoiceSnapshot],
   );
   // Below are two custom elements that can be added to the Tsdraw ui using the 'customElements' prop
   // The second one shows that you can actually edit properties of the Tsdraw instance.
@@ -192,7 +205,7 @@ export function App() {
     triggerConfetti();
 
     editorRef.current = api.editor;
-    editorRef.current.selectedEmoji = selectedEmojiRef.current;
+    editorRef.current.selectedEmoji = emojiChoiceRef.current;
 
     const renderer = editorRef.current.renderer as any;
     if (renderer.__emojiBrushPatched) return;

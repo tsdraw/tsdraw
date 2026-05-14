@@ -12,6 +12,10 @@ const STYLE_DASHES: DashStyle[] = ['draw', 'solid', 'dashed', 'dotted'];
 const STYLE_FILLS: FillStyle[] = ['none', 'blank', 'semi', 'solid'];
 const STYLE_SIZES: SizeStyle[] = ['s', 'm', 'l', 'xl'];
 
+function readableCustomPartId(partId: string) {
+  return partId.split(/[-_]/).filter(Boolean).map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1)).join(' ');
+}
+
 export type TsdrawStylePanelPartItem = | 'colors' | 'dashes' | 'fills' | 'sizes' | (string & {});
 export type TsdrawStylePanelMenuPlacement = 'top' | 'bottom' | 'left' | 'right';
 
@@ -28,6 +32,8 @@ export interface TsdrawStylePanelRenderContext {
 
 export interface TsdrawStylePanelCustomPart {
   id: string;
+  label?: string;
+  renderTriggerPreview?: (context: TsdrawStylePanelRenderContext) => ReactNode;
   render: (context: TsdrawStylePanelRenderContext) => ReactNode;
 }
 
@@ -76,18 +82,20 @@ export function StylePanel({
   const renderMenu = (part: TsdrawStylePanelPartItem) => {
     if (part === 'colors') {
       return (
-        <div className="tsdraw-style-colors tsdraw-style-colors--menu">
+        <div className="tsdraw-style-grid">
           {STYLE_COLORS.map((item) => (
             <button
-            key={item.value}
-            type="button"
-            className="tsdraw-style-color"
-            data-active={drawColor === item.value ? 'true' : undefined}
-            aria-label={`Color ${item.value}`}
-            title={item.value}
-            onClick={() => { onColorSelect(item.value); close(); }}
-          >
-              <span className="tsdraw-style-color-dot" style={{ background: resolveThemeColor(item.value, theme) }} />
+              key={item.value}
+              type="button"
+              className="tsdraw-style-cell"
+              data-active={drawColor === item.value ? 'true' : undefined}
+              aria-label={`Color ${item.value}`}
+              title={item.value}
+              onClick={() => { onColorSelect(item.value); close(); }}
+            >
+              <span className="tsdraw-style-cell-inner">
+                <span className="tsdraw-style-toggle-dot" style={{ background: resolveThemeColor(item.value, theme) }} />
+              </span>
             </button>
           ))}
         </div>
@@ -97,7 +105,7 @@ export function StylePanel({
     const rows = part === 'dashes' ? STYLE_DASHES : part === 'fills' ? STYLE_FILLS : part === 'sizes' ? STYLE_SIZES : null;
     if (rows) {
       return (
-        <div className="tsdraw-style-section tsdraw-style-section--menu-row">
+        <div className="tsdraw-style-grid">
           {rows.map((item) => {
             const active = part === 'dashes' ? drawDash === item : part === 'fills' ? drawFill === item : drawSize === item;
             const select = () => {
@@ -110,16 +118,16 @@ export function StylePanel({
               <button
                 key={item}
                 type="button"
-                className="tsdraw-style-row"
+                className="tsdraw-style-cell"
                 data-active={active ? 'true' : undefined}
                 aria-label={`${part} ${item}`}
                 title={item}
                 onClick={select}
               >
-                <span className="tsdraw-style-preview">
-                  {part === 'dashes' ? <span className={`tsdraw-style-preview-line tsdraw-style-preview-line--${item}`} /> : null}
-                  {part === 'fills' ? <span className={`tsdraw-style-fill tsdraw-style-fill--${item}`} /> : null}
-                  {part === 'sizes' ? <span className={`tsdraw-style-size tsdraw-style-size--${item}`} /> : null}
+                <span className="tsdraw-style-cell-inner">
+                  {part === 'dashes' ? <span className={`tsdraw-style-toggle-line tsdraw-style-toggle-line--${item}`} /> : null}
+                  {part === 'fills' ? <span className={`tsdraw-style-toggle-fill tsdraw-style-toggle-fill--${item}`} /> : null}
+                  {part === 'sizes' ? <span className={`tsdraw-style-toggle-size tsdraw-style-toggle-size--${item}`} /> : null}
                 </span>
               </button>
             );
@@ -129,14 +137,25 @@ export function StylePanel({
     }
 
     const customPart = customPartMap.get(part);
-    return customPart ? <div className="tsdraw-style-section tsdraw-style-section--custom">{customPart.render(context)}</div> : null;
+    return customPart ? <div className="tsdraw-style-custom">{customPart.render(context)}</div> : null;
   };
 
   const renderTrigger = (part: TsdrawStylePanelPartItem, isOpen: boolean) => {
     if (part === 'colors') return <button type="button" className="tsdraw-style-toggle" aria-expanded={isOpen} aria-haspopup="menu"><span className="tsdraw-style-toggle-dot" style={{ background: previewColor }} /><span>Color</span></button>;
     if (part === 'dashes') return <button type="button" className="tsdraw-style-toggle" aria-expanded={isOpen} aria-haspopup="menu"><span>Stroke</span><span className={`tsdraw-style-toggle-line tsdraw-style-toggle-line--${drawDash}`} /></button>;
-    if (part === 'fills') return <button type="button" className="tsdraw-style-toggle" aria-expanded={isOpen} aria-haspopup="menu"><span>Fill</span><span className={`tsdraw-style-fill tsdraw-style-fill--${drawFill}`} /></button>;
-    if (part === 'sizes') return <button type="button" className="tsdraw-style-toggle" aria-expanded={isOpen} aria-haspopup="menu"><span>Size</span><span className={`tsdraw-style-size tsdraw-style-size--${drawSize}`} /></button>;
+    if (part === 'fills') return <button type="button" className="tsdraw-style-toggle" aria-expanded={isOpen} aria-haspopup="menu"><span>Fill</span><span className={`tsdraw-style-toggle-fill tsdraw-style-toggle-fill--${drawFill}`} /></button>;
+    if (part === 'sizes') return <button type="button" className="tsdraw-style-toggle" aria-expanded={isOpen} aria-haspopup="menu"><span>Size</span><span className={`tsdraw-style-toggle-size tsdraw-style-toggle-size--${drawSize}`} /></button>;
+    const customTriggerPart = customPartMap.get(part); // For custom parts (like seen in the demo, so custom triggers can be added)
+    if (customTriggerPart) {
+      const triggerLabel = customTriggerPart.label ?? readableCustomPartId(part);
+      const triggerPreview = customTriggerPart.renderTriggerPreview?.(context);
+      return (
+        <button type="button" className="tsdraw-style-toggle" aria-expanded={isOpen} aria-haspopup="dialog">
+          <span>{triggerLabel}</span>
+          {triggerPreview ?? null}
+        </button>
+      );
+    }
     return <button type="button" className="tsdraw-style-toggle" aria-expanded={isOpen} aria-haspopup="dialog"><span>{part}</span></button>;
   };
 

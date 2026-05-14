@@ -210,6 +210,7 @@
 .tsdraw-style-popout {
   box-sizing: border-box;
   min-width: 152px;
+  padding: 2px 5px;
   z-index: 10060;
   border: 1px solid color-mix(in srgb, var(--tsdraw-color-border) 88%, transparent);
   border-radius: var(--tsdraw-radius);
@@ -270,31 +271,57 @@
 }
 
 .tsdraw-style-toggle-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--tsdraw-color-border);
+  flex-shrink: 0;
+}
+
+.tsdraw-style-toggle .tsdraw-style-toggle-dot {
   width: 14px;
   height: 14px;
-  border: 1px solid var(--tsdraw-color-border);
   border-radius: 999px;
+}
+
+.tsdraw-style-toggle-emoji {
+  font-size: 18px;
+  line-height: 1;
   flex-shrink: 0;
 }
 
 .tsdraw-style-toggle-line {
-  width: 22px;
+  width: 24px;
   height: 2px;
   border-radius: 999px;
   background: var(--tsdraw-color-preview);
   flex-shrink: 0;
 }
 
+.tsdraw-style-toggle .tsdraw-style-toggle-line {
+  width: 22px;
+}
+
 .tsdraw-style-toggle-line--draw {
-  height: 8px;
+  height: 10px;
   background-color: transparent;
   background-position: center;
   background-repeat: repeat-x;
+  background-size: 12px 10px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='10' viewBox='0 0 12 10'%3E%3Cpath d='M0 5 C2 1 4 9 6 5 C8 1 10 9 12 5' stroke='%231d1d1d' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+.tsdraw-style-toggle .tsdraw-style-toggle-line--draw {
+  height: 8px;
   background-size: 12px 8px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M0 4 C2 1 4 7 6 4 C8 1 10 7 12 4' stroke='%231d1d1d' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
 }
 
 .tsdraw.tsdraw-darkmode .tsdraw-style-toggle-line--draw {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='10' viewBox='0 0 12 10'%3E%3Cpath d='M0 5 C2 1 4 9 6 5 C8 1 10 9 12 5' stroke='%23ececec' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+.tsdraw.tsdraw-darkmode .tsdraw-style-toggle .tsdraw-style-toggle-line--draw {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M0 4 C2 1 4 7 6 4 C8 1 10 7 12 4' stroke='%23ececec' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
 }
 
@@ -308,97 +335,89 @@
   background-size: 6px 4px;
 }
 
-.tsdraw-style-toggle .tsdraw-style-fill,
-.tsdraw-style-toggle .tsdraw-style-size {
-  display: block;
+.tsdraw-style-toggle-size {
+  width: 24px;
+  border-radius: 999px;
+  background: var(--tsdraw-color-preview);
   flex-shrink: 0;
 }
 
-.tsdraw-style-colors {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0;
-  padding: 6px 5px;
-  padding-top: 0;
+.tsdraw-style-toggle-size--s {
+  height: 2px;
 }
 
-.tsdraw-style-color {
-  height: 30px;
+.tsdraw-style-toggle-size--m {
+  height: 3.5px;
+}
+
+.tsdraw-style-toggle-size--l {
+  height: 5px;
+}
+
+.tsdraw-style-toggle-size--xl {
+  height: 7px;
+}
+
+.tsdraw-style-toggle-fill {
+  width: 22px;
+  height: 14px;
+  border: 1px solid var(--tsdraw-color-preview);
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.tsdraw-style-toggle-fill--none {
+  background: repeating-linear-gradient(45deg, color-mix(in srgb, var(--tsdraw-color-preview) 35%, transparent) 0 2px, transparent 2px 6px);
+}
+
+.tsdraw-style-toggle-fill--blank {
+  background: var(--tsdraw-color-bg);
+}
+
+.tsdraw-style-toggle-fill--semi {
+  background: color-mix(in srgb, var(--tsdraw-color-preview) 28%, transparent);
+}
+
+.tsdraw-style-toggle-fill--solid {
+  background: color-mix(in srgb, var(--tsdraw-color-preview) 58%, transparent);
+}
+
+.tsdraw-style-toggle .tsdraw-style-toggle-fill,
+.tsdraw-style-toggle .tsdraw-style-toggle-size {
+  display: block;
+}
+
+.tsdraw-style-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  box-sizing: border-box;
+}
+
+.tsdraw-style-cell {
+  box-sizing: border-box;
+  aspect-ratio: 1;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
   border: none;
+  border-radius: 7px;
   background: transparent;
+  cursor: pointer;
   display: grid;
   place-items: center;
-  border-radius: 7px;
-  margin: 2px;
-  cursor: pointer;
 }
 
-.tsdraw-style-color:hover,
-.tsdraw-style-row:hover {
+.tsdraw-style-cell:hover {
   background: var(--tsdraw-color-muted);
 }
 
-.tsdraw-style-color[data-active='true'],
-.tsdraw-style-row[data-active='true'] {
+.tsdraw-style-cell[data-active='true'] {
   background: var(--tsdraw-color-active-surface);
 }
 
-.tsdraw-style-colors.tsdraw-style-colors--menu {
-  padding: 4px 5px 6px;
-  padding-top: 2px;
-}
-
-.tsdraw-style-colors--flush {
-  padding: 0;
-}
-
-.tsdraw-style-color--emoji {
-  font-size: 18px;
-  line-height: 1;
-}
-
-.tsdraw-style-color-dot {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 1px solid var(--tsdraw-color-border);
-}
-
-.tsdraw-style-row {
-  flex: 1;
-  height: 30px;
-  border: none;
-  background: transparent;
-  border-radius: 7px;
-  padding: 0;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.tsdraw-style-section {
-  display: flex;
-  gap: 2px;
-  padding: 0 5px 6px;
-}
-
-.tsdraw-style-section.tsdraw-style-section--menu-row {
-  flex-wrap: wrap;
-  justify-content: center;
-  padding: 2px 6px 6px;
-}
-
-.tsdraw-style-section.tsdraw-style-section--menu-row .tsdraw-style-row {
-  flex: 0 0 auto;
-}
-
-.tsdraw-style-panel button:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--tsdraw-color-selection-handle-border) 55%, transparent);
-  outline-offset: 1px;
-}
-
-.tsdraw-style-preview {
+.tsdraw-style-cell-inner {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -406,87 +425,18 @@
   height: 100%;
 }
 
-.tsdraw-style-preview-line {
-  width: 24px;
-  height: 2px;
-  border-radius: 999px;
-  background: var(--tsdraw-color-preview);
+.tsdraw-style-cell--emoji {
+  font-size: 18px;
+  line-height: 1;
 }
 
-.tsdraw-style-preview-line--draw {
-  height: 10px;
-  background-color: transparent;
-  background-position: center;
-  background-repeat: repeat-x;
-  background-size: 12px 10px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='10' viewBox='0 0 12 10'%3E%3Cpath d='M0 5 C2 1 4 9 6 5 C8 1 10 9 12 5' stroke='%231d1d1d' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+.tsdraw-style-custom {
+  box-sizing: border-box;
 }
 
-.tsdraw.tsdraw-darkmode .tsdraw-style-preview-line--draw {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='10' viewBox='0 0 12 10'%3E%3Cpath d='M0 5 C2 1 4 9 6 5 C8 1 10 9 12 5' stroke='%23ececec' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-}
-
-.tsdraw-style-preview-line--dashed {
-  background: repeating-linear-gradient(
-    90deg,
-    var(--tsdraw-color-preview) 0 6px,
-    transparent 6px 10px
-  );
-}
-
-.tsdraw-style-preview-line--dotted {
-  height: 4px;
-  background: repeating-radial-gradient(
-    circle at 2px 2px,
-    var(--tsdraw-color-preview) 0 1.5px,
-    transparent 1.5px 6px
-  );
-  background-size: 6px 4px;
-}
-
-.tsdraw-style-size {
-  width: 24px;
-  border-radius: 999px;
-  background: var(--tsdraw-color-preview);
-}
-
-.tsdraw-style-size--s {
-  height: 2px;
-}
-
-.tsdraw-style-size--m {
-  height: 3.5px;
-}
-
-.tsdraw-style-size--l {
-  height: 5px;
-}
-
-.tsdraw-style-size--xl {
-  height: 7px;
-}
-
-.tsdraw-style-fill {
-  width: 22px;
-  height: 14px;
-  border: 1px solid var(--tsdraw-color-preview);
-  border-radius: 4px;
-}
-
-.tsdraw-style-fill--none {
-  background: repeating-linear-gradient(45deg, color-mix(in srgb, var(--tsdraw-color-preview) 35%, transparent) 0 2px, transparent 2px 6px);
-}
-
-.tsdraw-style-fill--blank {
-  background: var(--tsdraw-color-bg);
-}
-
-.tsdraw-style-fill--semi {
-  background: color-mix(in srgb, var(--tsdraw-color-preview) 28%, transparent);
-}
-
-.tsdraw-style-fill--solid {
-  background: color-mix(in srgb, var(--tsdraw-color-preview) 58%, transparent);
+.tsdraw-style-panel button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--tsdraw-color-selection-handle-border) 55%, transparent);
+  outline-offset: 1px;
 }
 
 .tsdraw-selection-brush {
