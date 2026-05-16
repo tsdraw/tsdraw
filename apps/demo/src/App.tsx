@@ -241,6 +241,7 @@ export function App() {
         initialToolId="pen"
         autoShape={autoShapeConfig}
         uiOptions={{
+          showPenModeIndicator: true,
           toolbar: {
             placement: { anchor: 'bottom-center', edgeOffset: 18 },
             parts: [['undo', 'redo'], ['select', 'hand', 'pen', 'square', 'eraser', 'wavy', 'emoji']],

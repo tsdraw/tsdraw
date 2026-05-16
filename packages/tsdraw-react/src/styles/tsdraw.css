@@ -167,6 +167,21 @@
   height: 20px;
 }
 
+.tsdraw-toolbar-btn:has(.tsdraw-penmode-indicator) {
+  position: relative;
+}
+
+.tsdraw-toolbar-btn svg.tsdraw-penmode-indicator {
+  position: absolute;
+  right: -5px;
+  bottom: -3px;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+  color: var(--tsdraw-color-vertex-handle-fill);
+  filter: drop-shadow(0 0 0.6px var(--tsdraw-color-panel)) drop-shadow(0 0 0.6px var(--tsdraw-color-panel));
+}
+
 .tsdraw-toolbar button:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--tsdraw-color-selection-handle-border) 55%, transparent);
   outline-offset: 2px;

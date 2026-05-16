@@ -29,6 +29,13 @@ Position relative to the edge:
 <Tsdraw uiOptions={{ toolbar: { draggable: true, saveDraggedPosition: true } }} />
 ```
 
+### Pen mode indicator
+When a stylus is detected, Pen mode is activated. This makes it easier for the user to draw using their pressure-sensitive display/stylus. The **Pen** control in the toolbar shows a small blue "P" badge during Pen mode. This is on by default. Hide it with:
+
+```tsx
+<Tsdraw uiOptions={{ showPenModeIndicator: false }} />
+```
+
 ## Style panel
 
 Click a bubble to open a **context-style menu** at the pointer with every choice together; the current value stays highlighted in the list.

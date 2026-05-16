@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 import type { ToolId } from '@tsdraw/core';
-import { IconArrowBackUp, IconArrowForwardUp, IconEraser, IconHandStop, IconPencil, IconPointer, IconSquare, IconCircle } from '@tabler/icons-react';
+import { IconArrowBackUp, IconArrowForwardUp, IconCircle, IconCircleLetterPFilled, IconEraser, IconHandStop, IconPencil, IconPointer, IconSquare } from '@tabler/icons-react';
 import { BaseComponent, type ComponentDragEndPayload } from './BaseComponent.js';
 
 export interface ToolbarToolItem {
@@ -36,9 +36,16 @@ interface ToolbarProps {
   onDragEnd?: (payload: ComponentDragEndPayload) => void;
 }
 
-export function getDefaultToolbarIcon(toolId: ToolId, isActive: boolean): ReactNode {
+export function getDefaultToolbarIcon(toolId: ToolId, isActive: boolean, isPenModeActive = false): ReactNode {
   if (toolId === 'select') return <IconPointer size={18} stroke={1.75} fill={isActive ? 'currentColor' : 'none'} />;
-  if (toolId === 'pen') return <IconPencil size={18} stroke={1.75} fill={isActive ? 'currentColor' : 'none'} />;
+  if (toolId === 'pen') {
+    return (
+      <>
+        <IconPencil size={18} stroke={1.75} fill={isActive ? 'currentColor' : 'none'} />
+        {isPenModeActive ? <IconCircleLetterPFilled className="tsdraw-penmode-indicator" size={16} aria-hidden="true" /> : null}
+      </>
+    );
+  }
   if (toolId === 'square') return <IconSquare size={18} stroke={1.75} fill={isActive ? 'currentColor' : 'none'} />;
   if (toolId === 'circle') return <IconCircle size={18} stroke={1.75} fill={isActive ? 'currentColor' : 'none'} />;
   if (toolId === 'eraser') return <IconEraser size={18} stroke={1.75} fill={isActive ? 'currentColor' : 'none'} />;

@@ -121,6 +121,7 @@ export interface TsdrawCanvasController {
   applyDrawStyle: (partial: Partial<{ color: ColorStyle; dash: DashStyle; fill: FillStyle; size: SizeStyle }>) => void;
   handleResizePointerDown: (e: ReactPointerEvent<HTMLButtonElement>, handle: ResizeHandle) => void;
   handleRotatePointerDown: (e: ReactPointerEvent<HTMLButtonElement>) => void;
+  isPenModeActive: boolean;
 }
 
 function toScreenRect(editor: Editor, bounds: SelectionBounds): ScreenRect {
@@ -264,6 +265,7 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
   const [isPersistenceReady, setIsPersistenceReady] = useState(!options.persistenceKey);
   const [pointerScreenPoint, setPointerScreenPoint] = useState({ x: 0, y: 0 });
   const [isPointerInsideCanvas, setIsPointerInsideCanvas] = useState(false);
+  const [isPenModeActive, setIsPenModeActive] = useState(false);
 
   useEffect(() => { currentToolRef.current = currentTool; }, [currentTool]);
   useEffect(() => { onMountRef.current = options.onMount; }, [options.onMount]);
@@ -673,6 +675,7 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
       if (penAutoDetect && !penDetectedRef.current && (e.pointerType === 'pen' || hasRealPressure(e.pressure))) {
         penDetectedRef.current = true;
         penModeRef.current = true;
+        setIsPenModeActive(true);
       }
       lastPointerDownWithRef.current = e.pointerType as 'mouse' | 'touch' | 'pen';
       activePointerIdsRef.current.add(e.pointerId);
@@ -784,6 +787,7 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
       if (penAutoDetectOnMove && !penDetectedRef.current && (e.pointerType === 'pen' || hasRealPressure(e.pressure))) {
         penDetectedRef.current = true;
         penModeRef.current = true;
+        setIsPenModeActive(true);
       }
       if (touchInteractions.handlePointerMove(e)) {
         e.preventDefault();
@@ -1461,5 +1465,6 @@ export function useTsdrawCanvasController(options: UseTsdrawCanvasControllerOpti
     applyDrawStyle,
     handleResizePointerDown,
     handleRotatePointerDown,
+    isPenModeActive,
   };
 }

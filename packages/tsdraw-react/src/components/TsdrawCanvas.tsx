@@ -91,6 +91,7 @@ export interface TsdrawUiOptions {
       currentTool: ToolId;
     }) => ReactNode;
   };
+  showPenModeIndicator?: boolean;
 }
 
 export interface TsdrawCustomElementRenderArgs {
@@ -146,6 +147,7 @@ export function Tsdraw(props: TsdrawProps) {
   const toolbarPlacement = props.uiOptions?.toolbar?.placement;
   const toolbarEdgeOffset = toolbarPlacement?.edgeOffset ?? 14;
   const isToolbarDraggable = props.uiOptions?.toolbar?.draggable === true;
+  const showPenModeIndicator = props.uiOptions?.showPenModeIndicator !== false;
   const shouldSaveDraggedToolbarPosition = props.uiOptions?.toolbar?.saveDraggedPosition === true;
   const disabledDragPositionsArray = props.uiOptions?.toolbar?.disabledDragPositions;
   const disabledDragPositionsSet = useMemo(
@@ -231,6 +233,7 @@ export function Tsdraw(props: TsdrawProps) {
     applyDrawStyle,
     handleResizePointerDown,
     handleRotatePointerDown,
+    isPenModeActive,
   } = useTsdrawCanvasController({
     toolDefinitions,
     initialTool,
@@ -357,7 +360,7 @@ export function Tsdraw(props: TsdrawProps) {
                   type: 'tool' as const,
                   id: item,
                   label: DEFAULT_TOOL_LABELS[item as DefaultToolId],
-                  icon: (isActive: boolean) => getDefaultToolbarIcon(item, isActive),
+                  icon: (isActive: boolean) => getDefaultToolbarIcon(item, isActive, isPenModeActive && showPenModeIndicator),
                 };
               }
 
@@ -377,7 +380,7 @@ export function Tsdraw(props: TsdrawProps) {
           };
         })
         .filter((part) => part.items.length > 0),
-    [canRedo, canUndo, customToolMap, redo, toolbarPartIds, undo]
+    [canRedo, canUndo, customToolMap, isPenModeActive, redo, showPenModeIndicator, toolbarPartIds, undo]
   );
 
   return (
