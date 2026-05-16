@@ -52,8 +52,9 @@ export class CanvasRenderer implements ICanvasRenderer {
     }
 
     const config = strokeConfig(shape, width);
+    const forOutline = densifyPolylineSamples(samples, maxSampleGapForStrokeWidth(width));
     const outline = getStroke(
-      samples.map((p) => [p.x, p.y, p.pressure] as [number, number, number]),
+      forOutline.map((p) => [p.x, p.y, p.pressure] as [number, number, number]),
       config
     );
     if (outline.length === 0) return;
@@ -156,14 +157,57 @@ function remap(
   return outLo + (outHi - outLo) * clamped;
 }
 
+// perfect-freehand removes outline vertices until |pointDelta|^2 > (size*smoothing)^2 which makes coarse bumpy fills
+// to fix this, we make smoothing lesser as size increases so size x smoothing is constant
+// also insert points at long edges to getStroke input isnt undersampled
+function smoothingForStrokeSize(strokeSizePx: number): number {
+  const targetOutlineScale = 8;
+  const raw = targetOutlineScale / Math.max(strokeSizePx, 1);
+  return Math.min(0.65, Math.max(0.15, raw));
+}
+
+function maxSampleGapForStrokeWidth(width: number): number {
+  return Math.max(3, Math.min(12, width * 0.42));
+}
+
+type OutlineSample = { x: number; y: number; pressure: number };
+
+function densifyPolylineSamples(samples: OutlineSample[], maxGap: number): OutlineSample[] {
+  if (samples.length < 2 || maxGap <= 0) return samples;
+  const out: OutlineSample[] = [samples[0]!];
+  for (let i = 1; i < samples.length; i++) {
+    const a = samples[i - 1]!;
+    const b = samples[i]!;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len = Math.hypot(dx, dy);
+    if (len <= maxGap || len === 0) {
+      out.push(b);
+      continue;
+    }
+    const steps = Math.ceil(len / maxGap);
+    for (let s = 1; s < steps; s++) {
+      const t = s / steps;
+      out.push({
+        x: a.x + dx * t,
+        y: a.y + dy * t,
+        pressure: a.pressure + (b.pressure - a.pressure) * t,
+      });
+    }
+    out.push(b);
+  }
+  return out;
+}
+
 function strokeConfig(shape: DrawShape, width: number) {
   const done = shape.props.isComplete || shape.props.isClosed === true;
   if (shape.props.isPen) {
+    const strokeSize = 1 + width * 1.2;
     return {
-      size: 1 + width * 1.2,
+      size: strokeSize,
       thinning: 0.62,
       streamline: 0.62,
-      smoothing: 0.62,
+      smoothing: smoothingForStrokeSize(strokeSize),
       simulatePressure: false,
       easing: STYLUS_CURVE,
       last: done,
@@ -173,7 +217,7 @@ function strokeConfig(shape: DrawShape, width: number) {
     size: width,
     thinning: 0.5,
     streamline: remap(width, [9, 16], [0.64, 0.74], true),
-    smoothing: 0.62,
+    smoothing: smoothingForStrokeSize(width),
     simulatePressure: true,
     easing: sineOut,
     last: done,
